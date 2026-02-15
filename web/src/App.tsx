@@ -193,12 +193,36 @@ const NODE_DEFS: NodeDef[] = [
 ];
 
 const CATEGORIES: Record<string, string> = {
-  input: "📥 Inputs",
-  image: "🖼️ Image",
-  video: "🎬 Video",
-  text: "🤖 Text / LLM",
-  transform: "🔄 Transform",
-  output: "📤 Output",
+  input: "Inputs",
+  image: "Image",
+  video: "Video",
+  text: "Text / LLM",
+  transform: "Transform",
+  output: "Output",
+};
+
+// SVG outlined icons for toolbar and nodes
+const SVG_ICONS: Record<string, string> = {
+  input: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></svg>`,
+  image: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>`,
+  video: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 3 20 12 6 21 6 3"/></svg>`,
+  text: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`,
+  transform: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>`,
+  output: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="21.17" y1="8" x2="12" y2="8"/><line x1="3.95" y1="6.06" x2="8.54" y2="14"/><line x1="10.88" y1="21.94" x2="15.46" y2="14"/></svg>`,
+  settings: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
+  run: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>`,
+};
+
+// Node-level outlined icons
+const NODE_ICONS: Record<string, string> = {
+  "text.input": `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg>`,
+  "image.text_to_image": `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>`,
+  "video.text_to_video": `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 3 20 12 6 21 6 3"/></svg>`,
+  "image.img_to_img": `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></svg>`,
+  "transform.upscale": `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>`,
+  "transform.inpaint": `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>`,
+  "text.llm": `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`,
+  "output.preview": `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`,
 };
 
 function groupByCategory(defs: NodeDef[]) {
@@ -288,21 +312,18 @@ function FlowNode({ data, selected }: NodeProps) {
         transition: "box-shadow 0.2s, border-color 0.2s",
       }}
     >
-      {/* Header — minimal, just the name */}
-      <div
-        style={{
-          padding: "14px 18px 10px",
-        }}
-      >
-        <div style={{
-          fontSize: 11,
-          fontWeight: 700,
+      {/* Header */}
+      <div style={{ padding: "14px 18px 10px", display: "flex", alignItems: "center", gap: 8 }}>
+        <span style={{ color: "#6b7280", display: "flex" }} dangerouslySetInnerHTML={{ __html: NODE_ICONS[def.id] || "" }} />
+        <span style={{
+          fontSize: 12,
+          fontWeight: 600,
           color: "#1a1a1a",
-          textTransform: "uppercase",
-          letterSpacing: "0.8px",
+          letterSpacing: "-0.2px",
+          fontFamily: "'SF Pro Display', 'Inter', -apple-system, sans-serif",
         }}>
-          {def.icon} {def.name}
-        </div>
+          {def.name}
+        </span>
       </div>
 
       {/* Input handles + fields */}
@@ -621,145 +642,172 @@ export default function App() {
     e.dataTransfer.dropEffect = "move";
   }, []);
 
+  const [activePanel, setActivePanel] = useState<string | null>(null);
+  const categories = Object.keys(grouped);
+
   return (
-    <div style={{ display: "flex", height: "100vh", background: "#f0f0f2", color: "#1a1a1a" }}>
-      {/* Sidebar */}
-      <aside
-        style={{
-          width: 250,
-          background: "#ffffff",
-          borderRight: "1px solid #e8e8eb",
-          overflowY: "auto",
-          flexShrink: 0,
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
+    <div style={{ display: "flex", height: "100vh", background: "#f0f0f2", color: "#1a1a1a", fontFamily: "'SF Pro Display', 'Inter', -apple-system, 'Helvetica Neue', sans-serif" }}>
+
+      {/* Icon strip — thin left toolbar */}
+      <nav style={{
+        width: 56,
+        background: "#ffffff",
+        borderRight: "1px solid #ebebee",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        paddingTop: 16,
+        paddingBottom: 16,
+        flexShrink: 0,
+        zIndex: 20,
+      }}>
         {/* Logo */}
-        <div
-          style={{
-            padding: "18px 20px 14px",
-            borderBottom: "1px solid #f0f0f2",
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-          }}
+        <div style={{
+          width: 34, height: 34, borderRadius: 10,
+          background: "#1a1a1a", color: "#fff",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 14, fontWeight: 800, marginBottom: 20, letterSpacing: "-0.5px",
+          cursor: "pointer",
+        }}
+          title="OpenFlow"
+          onClick={() => setActivePanel(null)}
         >
-          <span style={{ fontSize: 18, fontWeight: 800, letterSpacing: "-0.5px", color: "#1a1a1a" }}>
-            OpenFlow
-          </span>
-          <span style={{ fontSize: 9, color: "#9ca3af", marginLeft: "auto", background: "#f5f5f7", padding: "2px 8px", borderRadius: 6, fontWeight: 600 }}>
-            v0.1
-          </span>
+          OF
         </div>
 
-        {/* Node palette */}
-        <div style={{ flex: 1, overflowY: "auto" }}>
-          {Object.entries(grouped).map(([category, defs]) => (
-            <div key={category}>
-              <div
-                style={{
-                  padding: "16px 20px 6px",
-                  fontSize: 10,
-                  fontWeight: 600,
-                  color: "#9ca3af",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.8px",
-                }}
-              >
-                {CATEGORIES[category] || category}
+        {/* Category icons */}
+        {categories.map((cat) => (
+          <button
+            key={cat}
+            title={CATEGORIES[cat] || cat}
+            onClick={() => setActivePanel(activePanel === cat ? null : cat)}
+            style={{
+              width: 38, height: 38, borderRadius: 10,
+              border: "none",
+              background: activePanel === cat ? "#f0f0f2" : "transparent",
+              color: activePanel === cat ? "#1a1a1a" : "#9ca3af",
+              cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              marginBottom: 4,
+              transition: "all 0.15s",
+            }}
+            onMouseOver={(e) => { if (activePanel !== cat) e.currentTarget.style.color = "#6b7280"; }}
+            onMouseOut={(e) => { if (activePanel !== cat) e.currentTarget.style.color = "#9ca3af"; }}
+            dangerouslySetInnerHTML={{ __html: SVG_ICONS[cat] || "" }}
+          />
+        ))}
+
+        <div style={{ flex: 1 }} />
+
+        {/* Settings */}
+        <button
+          title="Settings"
+          onClick={() => setActivePanel(activePanel === "settings" ? null : "settings")}
+          style={{
+            width: 38, height: 38, borderRadius: 10,
+            border: "none",
+            background: activePanel === "settings" ? "#f0f0f2" : "transparent",
+            color: activePanel === "settings" ? "#1a1a1a" : "#9ca3af",
+            cursor: "pointer",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            marginBottom: 4,
+          }}
+          dangerouslySetInnerHTML={{ __html: SVG_ICONS.settings }}
+        />
+
+        {/* Run */}
+        <button
+          title="Run workflow"
+          onClick={handleRun}
+          disabled={isRunning || nodes.length === 0}
+          style={{
+            width: 38, height: 38, borderRadius: 10,
+            border: "none",
+            background: isRunning ? "#e5e7eb" : "#1a1a1a",
+            color: "#ffffff",
+            cursor: isRunning ? "not-allowed" : "pointer",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}
+          dangerouslySetInnerHTML={{ __html: SVG_ICONS.run }}
+        />
+      </nav>
+
+      {/* Flyout panel */}
+      {activePanel && (
+        <aside style={{
+          width: 220,
+          background: "#ffffff",
+          borderRight: "1px solid #ebebee",
+          overflowY: "auto",
+          flexShrink: 0,
+          zIndex: 15,
+          boxShadow: "4px 0 16px rgba(0,0,0,0.03)",
+        }}>
+          {activePanel === "settings" ? (
+            <div style={{ padding: 20 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#1a1a1a", marginBottom: 16 }}>Settings</div>
+              <div style={{ fontSize: 10, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 6 }}>
+                fal.ai API Key
               </div>
-              {defs.map((def) => (
+              <input
+                type="password"
+                value={falApiKey}
+                onChange={(e) => setFalApiKey(e.target.value)}
+                onKeyDown={stopKeys}
+                placeholder="fal-xxxxxxxx"
+                style={{
+                  width: "100%",
+                  background: "#f5f5f7",
+                  border: "none",
+                  borderRadius: 8,
+                  color: "#1a1a1a",
+                  fontSize: 12,
+                  padding: "8px 12px",
+                  outline: "none",
+                  boxSizing: "border-box",
+                }}
+              />
+              <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 6 }}>
+                Free at <a href="https://fal.ai/dashboard/keys" target="_blank" rel="noopener" style={{ color: "#1a1a1a", fontWeight: 600, textDecoration: "none" }}>fal.ai</a>
+              </div>
+              <div style={{ fontSize: 10, color: "#c4c4c8", marginTop: 20 }}>
+                {nodes.length} nodes · {edges.length} connections
+              </div>
+            </div>
+          ) : (
+            <div style={{ padding: "16px 0" }}>
+              <div style={{ padding: "0 16px 10px", fontSize: 13, fontWeight: 600, color: "#1a1a1a" }}>
+                {CATEGORIES[activePanel] || activePanel}
+              </div>
+              {(grouped[activePanel] || []).map((def) => (
                 <div
                   key={def.id}
                   draggable
                   onDragStart={(e) => onDragStart(e, def)}
-                  onClick={() => addNodeWithHandler(def)}
+                  onClick={() => { addNodeWithHandler(def); setActivePanel(null); }}
                   style={{
                     display: "flex",
                     alignItems: "center",
                     gap: 10,
-                    padding: "7px 20px",
+                    padding: "8px 16px",
                     cursor: "grab",
-                    borderRadius: 8,
-                    margin: "1px 8px",
-                    transition: "background 0.15s",
+                    borderRadius: 0,
+                    transition: "background 0.12s",
                   }}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.background = "#f5f5f7";
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.background = "transparent";
-                  }}
+                  onMouseOver={(e) => { e.currentTarget.style.background = "#f5f5f7"; }}
+                  onMouseOut={(e) => { e.currentTarget.style.background = "transparent"; }}
                 >
-                  <span style={{ fontSize: 15 }}>{def.icon}</span>
+                  <span style={{ color: "#6b7280", display: "flex" }} dangerouslySetInnerHTML={{ __html: NODE_ICONS[def.id] || "" }} />
                   <div>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: "#1a1a1a" }}>{def.name}</div>
+                    <div style={{ fontSize: 13, fontWeight: 500, color: "#1a1a1a" }}>{def.name}</div>
                     <div style={{ fontSize: 10, color: "#9ca3af" }}>{def.description}</div>
                   </div>
                 </div>
               ))}
             </div>
-          ))}
-        </div>
-
-        {/* API Key + Run */}
-        <div style={{ padding: "12px 16px", borderTop: "1px solid #f0f0f2" }}>
-          <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 9, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 4 }}>
-              API Key
-            </div>
-            <input
-              type="password"
-              value={falApiKey}
-              onChange={(e) => setFalApiKey(e.target.value)}
-              onKeyDown={stopKeys}
-              placeholder="fal-xxxxxxxx"
-              style={{
-                width: "100%",
-                background: "#f5f5f7",
-                border: "none",
-                borderRadius: 8,
-                color: "#1a1a1a",
-                fontSize: 11,
-                padding: "8px 12px",
-                outline: "none",
-              }}
-            />
-            <div style={{ fontSize: 9, color: "#9ca3af", marginTop: 4 }}>
-              Free at <a href="https://fal.ai/dashboard/keys" target="_blank" rel="noopener" style={{ color: "#1a1a1a", fontWeight: 600, textDecoration: "none" }}>fal.ai</a>
-            </div>
-          </div>
-        </div>
-        <div style={{ padding: "0 16px 16px" }}>
-          <button
-            onClick={handleRun}
-            disabled={isRunning || nodes.length === 0}
-            style={{
-              width: "100%",
-              padding: "10px",
-              background: isRunning ? "#e5e7eb" : "#1a1a1a",
-              color: isRunning ? "#9ca3af" : "#ffffff",
-              border: "none",
-              borderRadius: 10,
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: isRunning ? "not-allowed" : "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-              transition: "background 0.2s",
-              letterSpacing: "-0.2px",
-            }}
-          >
-            {isRunning ? "Generating..." : "Run"}
-          </button>
-          <div style={{ fontSize: 10, color: "#c4c4c8", textAlign: "center", marginTop: 8 }}>
-            {nodes.length} nodes · {edges.length} connections
-          </div>
-        </div>
-      </aside>
+          )}
+        </aside>
+      )}
 
       {/* Canvas */}
       <div style={{ flex: 1 }} onDrop={onDrop} onDragOver={onDragOver}>

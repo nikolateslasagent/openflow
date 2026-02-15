@@ -601,7 +601,7 @@ function LandingPage({ onEnter }: { onEnter: () => void }) {
         }}>
           <span style={{
             width: 8, height: 8, borderRadius: "50%",
-            background: "#ef4444", boxShadow: "0 0 0 3px rgba(239,68,68,0.2)",
+            background: "#22c55e", boxShadow: "0 0 0 3px rgba(34,197,94,0.2)",
           }} />
           <span style={{ fontSize: 12, fontWeight: 600, color: "#e5e7eb", letterSpacing: "0.3px" }}>
             NO SUBSCRIPTIONS & NO MARKUP!

@@ -1,6 +1,6 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 /**
- * OpenFlow — Visual AI Workflow Builder
+ * OpenClaw — Visual AI Workflow Builder
  *
  * Fully interactive node canvas with:
  * - Custom node components with real input fields
@@ -384,7 +384,7 @@ function LandingPage({ onEnter }) {
                                             width: 32, height: 32, borderRadius: "50%",
                                             background: "#c026d3", display: "flex", alignItems: "center",
                                             justifyContent: "center", fontSize: 12, fontWeight: 800, color: "#fff",
-                                        }, children: "OF" }), _jsx("span", { style: { fontSize: 16, fontWeight: 700, letterSpacing: "-0.5px" }, children: "OpenFlow" })] }), _jsxs("div", { style: { display: "flex", alignItems: "center", gap: 24 }, children: [_jsx("a", { href: "https://github.com/nikolateslasagent/openflow", target: "_blank", rel: "noopener", style: { color: "#9ca3af", fontSize: 13, textDecoration: "none", fontWeight: 500 }, children: "GitHub" }), _jsx("button", { onClick: onEnter, style: {
+                                        }, children: "OC" }), _jsx("span", { style: { fontSize: 16, fontWeight: 700, letterSpacing: "-0.5px" }, children: "OpenClaw" })] }), _jsxs("div", { style: { display: "flex", alignItems: "center", gap: 24 }, children: [_jsx("a", { href: "https://github.com/nikolateslasagent/openflow", target: "_blank", rel: "noopener", style: { color: "#9ca3af", fontSize: 13, textDecoration: "none", fontWeight: 500 }, children: "GitHub" }), _jsx("button", { onClick: onEnter, style: {
                                             padding: "8px 20px", borderRadius: 8, border: "1px solid #333",
                                             background: "transparent", color: "#fff", fontSize: 13, fontWeight: 600,
                                             cursor: "pointer",
@@ -441,7 +441,7 @@ function LandingPage({ onEnter }) {
                                                 background: "#c026d3", display: "flex", alignItems: "center",
                                                 justifyContent: "center", fontSize: 18, fontWeight: 800,
                                                 margin: "0 auto 16px", color: "#fff",
-                                            }, children: "OF" }), _jsx("div", { style: { fontSize: 14, color: "#6b7280", fontWeight: 500 }, children: "Your workspace awaits" }), _jsx("div", { style: { fontSize: 11, color: "#4b5563", marginTop: 4 }, children: "18 image models \u00B7 14 video models \u00B7 unlimited creativity" })] }) })] })] })] }));
+                                            }, children: "OC" }), _jsx("div", { style: { fontSize: 14, color: "#6b7280", fontWeight: 500 }, children: "Your workspace awaits" }), _jsx("div", { style: { fontSize: 11, color: "#4b5563", marginTop: 4 }, children: "18 image models \u00B7 14 video models \u00B7 unlimited creativity" })] }) })] })] })] }));
 }
 // ---------------------------------------------------------------------------
 export default function App() {
@@ -616,7 +616,7 @@ export default function App() {
                             display: "flex", alignItems: "center", justifyContent: "center",
                             fontSize: 13, fontWeight: 800, color: "#0e0e10", marginBottom: 24,
                             cursor: "pointer", letterSpacing: "-0.5px",
-                        }, title: "OpenFlow", onClick: () => setActivePanel(null), children: "OF" }), categories.map((cat) => (_jsx("button", { title: CATEGORIES[cat] || cat, onClick: () => setActivePanel(activePanel === cat ? null : cat), style: {
+                        }, title: "OpenClaw", onClick: () => setActivePanel(null), children: "OF" }), categories.map((cat) => (_jsx("button", { title: CATEGORIES[cat] || cat, onClick: () => setActivePanel(activePanel === cat ? null : cat), style: {
                             width: 38, height: 38, borderRadius: 10,
                             border: "none",
                             background: activePanel === cat ? "#1e1e22" : "transparent",

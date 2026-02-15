@@ -473,7 +473,7 @@ function FlowNode({ data, selected }: NodeProps) {
             style={{
               width: "100%",
               padding: "10px",
-              background: nodeStatus === "running" ? "#e5e7eb" : "#c8f542",
+              background: nodeStatus === "running" ? "#e5e7eb" : "#c026d3",
               color: nodeStatus === "running" ? "#9ca3af" : "#0e0e10",
               border: "none",
               borderRadius: 10,
@@ -760,7 +760,7 @@ export default function App() {
         {/* Logo — circle */}
         <div style={{
           width: 36, height: 36, borderRadius: "50%",
-          background: "#c8f542",
+          background: "#c026d3",
           display: "flex", alignItems: "center", justifyContent: "center",
           fontSize: 13, fontWeight: 800, color: "#0e0e10", marginBottom: 24,
           cursor: "pointer", letterSpacing: "-0.5px",
@@ -781,7 +781,7 @@ export default function App() {
               width: 38, height: 38, borderRadius: 10,
               border: "none",
               background: activePanel === cat ? "#1e1e22" : "transparent",
-              color: activePanel === cat ? "#c8f542" : "#6b6b75",
+              color: activePanel === cat ? "#c026d3" : "#6b6b75",
               cursor: "pointer",
               display: "flex", alignItems: "center", justifyContent: "center",
               marginBottom: 4,
@@ -803,7 +803,7 @@ export default function App() {
             width: 38, height: 38, borderRadius: 10,
             border: "none",
             background: activePanel === "settings" ? "#1e1e22" : "transparent",
-            color: activePanel === "settings" ? "#c8f542" : "#6b6b75",
+            color: activePanel === "settings" ? "#c026d3" : "#6b6b75",
             cursor: "pointer",
             display: "flex", alignItems: "center", justifyContent: "center",
             marginBottom: 4,
@@ -819,7 +819,7 @@ export default function App() {
           style={{
             width: 38, height: 38, borderRadius: 10,
             border: "none",
-            background: isRunning ? "#2a2a30" : "#c8f542",
+            background: isRunning ? "#2a2a30" : "#c026d3",
             color: isRunning ? "#6b6b75" : "#0e0e10",
             cursor: isRunning ? "not-allowed" : "pointer",
             display: "flex", alignItems: "center", justifyContent: "center",

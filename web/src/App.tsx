@@ -432,6 +432,18 @@ function FlowNode({ data, selected }: NodeProps) {
       {/* Output preview */}
       {outputUrl && (
         <div style={{ padding: "8px 18px 12px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <span style={{ fontSize: 11, fontWeight: 600, color: "#6b7280" }}>
+              {def.category === "video" ? "Video" : def.category === "image" ? "Image" : "Output"}
+            </span>
+            <span style={{ fontSize: 11, fontWeight: 500, color: "#9ca3af" }}>
+              {(values.model as string) || ""}
+            </span>
+          </div>
+        </div>
+      )}
+      {outputUrl && (
+        <div style={{ padding: "0 18px 12px" }}>
           {(def.category === "video") ? (
             <video src={outputUrl} controls autoPlay loop muted style={{ width: "100%", borderRadius: 12 }} />
           ) : (

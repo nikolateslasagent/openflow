@@ -316,7 +316,7 @@ function FlowNode({ data, selected }) {
                                 fontSize: 13,
                                 padding: "8px 14px",
                                 outline: "none",
-                            } }))] }, inp.name))) }), outputUrl && (_jsx("div", { style: { padding: "8px 18px 12px" }, children: (def.category === "video") ? (_jsx("video", { src: outputUrl, controls: true, autoPlay: true, loop: true, muted: true, style: { width: "100%", borderRadius: 12 } })) : (_jsx("img", { src: outputUrl, alt: "output", style: { width: "100%", borderRadius: 12, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" } })) })), nodeStatus && (_jsxs("div", { style: {
+                            } }))] }, inp.name))) }), outputUrl && (_jsx("div", { style: { padding: "8px 18px 12px" }, children: _jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }, children: [_jsx("span", { style: { fontSize: 11, fontWeight: 600, color: "#6b7280" }, children: def.category === "video" ? "Video" : def.category === "image" ? "Image" : "Output" }), _jsx("span", { style: { fontSize: 11, fontWeight: 500, color: "#9ca3af" }, children: values.model || "" })] }) })), outputUrl && (_jsx("div", { style: { padding: "0 18px 12px" }, children: (def.category === "video") ? (_jsx("video", { src: outputUrl, controls: true, autoPlay: true, loop: true, muted: true, style: { width: "100%", borderRadius: 12 } })) : (_jsx("img", { src: outputUrl, alt: "output", style: { width: "100%", borderRadius: 12, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" } })) })), nodeStatus && (_jsxs("div", { style: {
                     padding: "8px 18px 12px",
                     fontSize: 11,
                     fontWeight: 500,

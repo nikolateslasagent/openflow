@@ -344,7 +344,23 @@ function FlowNode({ data, selected }) {
                                 fontSize: 13,
                                 padding: "8px 14px",
                                 outline: "none",
-                            } }))] }, inp.name))) }), outputUrl && (_jsx("div", { style: { padding: "8px 18px 12px" }, children: _jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }, children: [_jsx("span", { style: { fontSize: 11, fontWeight: 600, color: "#6b7280" }, children: def.category === "video" ? "Video" : def.category === "image" ? "Image" : "Output" }), _jsx("span", { style: { fontSize: 11, fontWeight: 500, color: "#9ca3af" }, children: values.model || "" })] }) })), outputUrl && (_jsx("div", { style: { padding: "0 18px 12px" }, children: (def.category === "video") ? (_jsx("video", { src: outputUrl, controls: true, autoPlay: true, loop: true, muted: true, style: { width: "100%", borderRadius: 12 } })) : (_jsx("img", { src: outputUrl, alt: "output", style: { width: "100%", borderRadius: 12, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" } })) })), nodeStatus && (_jsxs("div", { style: {
+                            } }))] }, inp.name))) }), def.inputs.some((inp) => inp.name === "model") && (_jsx("div", { style: { padding: "4px 18px 8px" }, children: _jsx("button", { onClick: () => {
+                        const onRun = data.onRun;
+                        if (onRun)
+                            onRun();
+                    }, disabled: nodeStatus === "running", style: {
+                        width: "100%",
+                        padding: "10px",
+                        background: nodeStatus === "running" ? "#e5e7eb" : "#c8f542",
+                        color: nodeStatus === "running" ? "#9ca3af" : "#0e0e10",
+                        border: "none",
+                        borderRadius: 10,
+                        fontSize: 13,
+                        fontWeight: 600,
+                        cursor: nodeStatus === "running" ? "not-allowed" : "pointer",
+                        transition: "background 0.15s",
+                        letterSpacing: "-0.2px",
+                    }, children: nodeStatus === "running" ? "Generating..." : "Generate ✦" }) })), outputUrl && (_jsx("div", { style: { padding: "8px 18px 12px" }, children: _jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }, children: [_jsx("span", { style: { fontSize: 11, fontWeight: 600, color: "#6b7280" }, children: def.category === "video" ? "Video" : def.category === "image" ? "Image" : "Output" }), _jsx("span", { style: { fontSize: 11, fontWeight: 500, color: "#9ca3af" }, children: values.model || "" })] }) })), outputUrl && (_jsx("div", { style: { padding: "0 18px 12px" }, children: (def.category === "video") ? (_jsx("video", { src: outputUrl, controls: true, autoPlay: true, loop: true, muted: true, style: { width: "100%", borderRadius: 12 } })) : (_jsx("img", { src: outputUrl, alt: "output", style: { width: "100%", borderRadius: 12, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" } })) })), nodeStatus && (_jsxs("div", { style: {
                     padding: "8px 18px 12px",
                     fontSize: 11,
                     fontWeight: 500,
@@ -398,6 +414,8 @@ export default function App() {
             };
         }));
     }, [setNodes]);
+    // Use ref so node callbacks always call latest version
+    const runSingleNodeRef = useRef(() => { });
     const addNodeWithHandler = useCallback((def, overrides) => {
         idCounter.current += 1;
         const nodeId = `${def.id}_${idCounter.current}`;
@@ -419,6 +437,7 @@ export default function App() {
                 def,
                 values: defaults,
                 onChange: (key, val) => updateNodeValue(nodeId, key, val),
+                onRun: () => runSingleNodeRef.current(nodeId),
             },
         };
         setNodes((nds) => [...nds, newNode]);
@@ -430,6 +449,28 @@ export default function App() {
             return { ...n, data: { ...n.data, ...patch } };
         }));
     }, [setNodes]);
+    const runSingleNode = useCallback(async (nodeId) => {
+        const node = nodes.find((n) => n.id === nodeId);
+        if (!node)
+            return;
+        const key = falApiKey;
+        if (!key) {
+            alert("Set your fal.ai API key in Settings first!");
+            return;
+        }
+        localStorage.setItem("openflow_fal_key", key);
+        const values = node.data.values;
+        const modelKey = values.model || "flux-dev";
+        setNodeData(nodeId, { status: "running", outputUrl: undefined });
+        const result = await runFalGeneration(modelKey, values, key);
+        if (result.url) {
+            setNodeData(nodeId, { status: "done", outputUrl: result.url });
+        }
+        else {
+            setNodeData(nodeId, { status: `Error: ${result.error}` });
+        }
+    }, [nodes, falApiKey, setNodeData]);
+    runSingleNodeRef.current = runSingleNode;
     const handleRun = useCallback(async () => {
         if (!falApiKey) {
             alert("Enter your fal.ai API key in the sidebar first!");
@@ -485,6 +526,7 @@ export default function App() {
                 def,
                 values: defaults,
                 onChange: (key, val) => updateNodeValue(nodeId, key, val),
+                onRun: () => runSingleNodeRef.current(nodeId),
             },
         };
         setNodes((nds) => [...nds, newNode]);

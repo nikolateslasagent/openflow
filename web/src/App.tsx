@@ -461,6 +461,34 @@ function FlowNode({ data, selected }: NodeProps) {
         ))}
       </div>
 
+      {/* Generate button on nodes with model input */}
+      {def.inputs.some((inp) => inp.name === "model") && (
+        <div style={{ padding: "4px 18px 8px" }}>
+          <button
+            onClick={() => {
+              const onRun = data.onRun as (() => void) | undefined;
+              if (onRun) onRun();
+            }}
+            disabled={nodeStatus === "running"}
+            style={{
+              width: "100%",
+              padding: "10px",
+              background: nodeStatus === "running" ? "#e5e7eb" : "#c8f542",
+              color: nodeStatus === "running" ? "#9ca3af" : "#0e0e10",
+              border: "none",
+              borderRadius: 10,
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: nodeStatus === "running" ? "not-allowed" : "pointer",
+              transition: "background 0.15s",
+              letterSpacing: "-0.2px",
+            }}
+          >
+            {nodeStatus === "running" ? "Generating..." : "Generate ✦"}
+          </button>
+        </div>
+      )}
+
       {/* Output preview */}
       {outputUrl && (
         <div style={{ padding: "8px 18px 12px" }}>
@@ -575,6 +603,9 @@ export default function App() {
     [setNodes]
   );
 
+  // Use ref so node callbacks always call latest version
+  const runSingleNodeRef = useRef<(nodeId: string) => void>(() => {});
+
   const addNodeWithHandler = useCallback(
     (def: NodeDef, overrides?: Record<string, unknown>) => {
       idCounter.current += 1;
@@ -596,6 +627,7 @@ export default function App() {
           def,
           values: defaults,
           onChange: (key: string, val: unknown) => updateNodeValue(nodeId, key, val),
+          onRun: () => runSingleNodeRef.current(nodeId),
         },
       };
       setNodes((nds) => [...nds, newNode]);
@@ -609,6 +641,27 @@ export default function App() {
       return { ...n, data: { ...n.data, ...patch } };
     }));
   }, [setNodes]);
+
+  const runSingleNode = useCallback(async (nodeId: string) => {
+    const node = nodes.find((n) => n.id === nodeId);
+    if (!node) return;
+    const key = falApiKey;
+    if (!key) { alert("Set your fal.ai API key in Settings first!"); return; }
+    localStorage.setItem("openflow_fal_key", key);
+
+    const values = node.data.values as Record<string, unknown>;
+    const modelKey = (values.model as string) || "flux-dev";
+
+    setNodeData(nodeId, { status: "running", outputUrl: undefined });
+    const result = await runFalGeneration(modelKey, values, key);
+    if (result.url) {
+      setNodeData(nodeId, { status: "done", outputUrl: result.url });
+    } else {
+      setNodeData(nodeId, { status: `Error: ${result.error}` });
+    }
+  }, [nodes, falApiKey, setNodeData]);
+
+  runSingleNodeRef.current = runSingleNode;
 
   const handleRun = useCallback(async () => {
     if (!falApiKey) {
@@ -673,6 +726,7 @@ export default function App() {
           def,
           values: defaults,
           onChange: (key: string, val: unknown) => updateNodeValue(nodeId, key, val),
+          onRun: () => runSingleNodeRef.current(nodeId),
         },
       };
       setNodes((nds) => [...nds, newNode]);

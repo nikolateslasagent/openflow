@@ -101,7 +101,7 @@ const NODE_DEFS: NodeDef[] = [
     inputs: [
       { name: "prompt", type: "string", description: "Text prompt", required: true },
       { name: "negative_prompt", type: "string", description: "Negative prompt", default: "" },
-      { name: "model", type: "string", description: "Model", default: "wan-2.6", options: ["wan-2.1", "wan-2.1-1.3b", "kling-2.0", "kling-1.6-pro", "runway-gen4", "minimax-hailuo", "minimax-hailuo-i2v", "hunyuan", "luma-ray-2", "ltx-video-0.9.7", "veo-2", "cogvideox-5b", "mochi-v1"] },
+      { name: "model", type: "string", description: "Model", default: "wan-2.1", options: ["wan-2.1", "wan-2.1-1.3b", "kling-2.0", "kling-1.6-pro", "minimax-hailuo", "hunyuan", "luma-ray-2", "ltx-video", "grok-video", "cogvideox-5b", "mochi-v1"] },
       { name: "duration", type: "integer", description: "Duration (sec)", default: 4, options: ["2", "4", "6", "8", "10"] },
       { name: "fps", type: "integer", description: "FPS", default: 24, options: ["12", "24", "30"] },
       { name: "width", type: "integer", description: "Width", default: 1280, options: ["512", "768", "1024", "1280"] },
@@ -267,15 +267,14 @@ const FAL_MODELS: Record<string, string> = {
   "higgsfield-image": "fal-ai/higgsfield",
   "wan-2.1": "fal-ai/wan/v2.1",
   "wan-2.1-1.3b": "fal-ai/wan/v2.1/1.3b",
-  "kling-2.0": "fal-ai/kling-video/v2/master",
-  "kling-1.6-pro": "fal-ai/kling-video/v1.6/pro",
-  "runway-gen4": "fal-ai/runway-gen3/turbo",
-  "minimax-hailuo": "fal-ai/minimax-video/video-01-live",
+  "kling-2.0": "fal-ai/kling-video/v2/master/text-to-video",
+  "kling-1.6-pro": "fal-ai/kling-video/v1.6/pro/text-to-video",
+  "minimax-hailuo": "fal-ai/minimax-video/video-01-live/text-to-video",
   "minimax-hailuo-i2v": "fal-ai/minimax-video/image-to-video",
   "hunyuan": "fal-ai/hunyuan-video",
   "luma-ray-2": "fal-ai/luma-dream-machine",
-  "ltx-video-0.9.7": "fal-ai/ltx-video",
-  "veo-2": "fal-ai/veo2",
+  "ltx-video": "fal-ai/ltx-video",
+  "grok-video": "fal-ai/grok-imagine-video",
   "cogvideox-5b": "fal-ai/cogvideox-5b",
   "mochi-v1": "fal-ai/mochi-v1",
   "real-esrgan": "fal-ai/real-esrgan",
@@ -288,9 +287,15 @@ async function runFalGeneration(
 ): Promise<{ url?: string; error?: string }> {
   const falModel = FAL_MODELS[modelKey] || FAL_MODELS["flux-dev"];
   try {
+    const isVideo = falModel.includes("video") || falModel.includes("wan") || falModel.includes("kling") || falModel.includes("minimax") || falModel.includes("hunyuan") || falModel.includes("luma") || falModel.includes("ltx") || falModel.includes("grok-imagine-video") || falModel.includes("cogvideo") || falModel.includes("mochi");
     const body: Record<string, unknown> = { prompt: inputs.prompt || "" };
     if (inputs.negative_prompt) body.negative_prompt = inputs.negative_prompt;
-    if (inputs.width) body.image_size = { width: Number(inputs.width), height: Number(inputs.height || inputs.width) };
+    if (isVideo) {
+      if (inputs.duration) body.duration = String(Number(inputs.duration)) + "s";
+      if (inputs.width && inputs.height) body.video_size = { width: Number(inputs.width), height: Number(inputs.height) };
+    } else {
+      if (inputs.width) body.image_size = { width: Number(inputs.width), height: Number(inputs.height || inputs.width) };
+    }
     if (inputs.guidance_scale) body.guidance_scale = Number(inputs.guidance_scale);
     if (inputs.steps) body.num_inference_steps = Number(inputs.steps);
     if (inputs.seed && Number(inputs.seed) >= 0) body.seed = Number(inputs.seed);

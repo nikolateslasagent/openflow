@@ -303,8 +303,9 @@ function FlowNode({ data, selected }: NodeProps) {
         background: "#ffffff",
         border: selected ? "1.5px solid #d1d5db" : "1px solid #e8e8eb",
         borderRadius: 16,
-        minWidth: 220,
+        minWidth: 240,
         maxWidth: 340,
+        overflow: "visible",
         fontFamily: "'Inter', -apple-system, 'Helvetica Neue', sans-serif",
         boxShadow: selected
           ? "0 8px 30px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04)"
@@ -327,9 +328,10 @@ function FlowNode({ data, selected }: NodeProps) {
       </div>
 
       {/* Input handles + fields */}
-      <div className="nodrag nowheel" style={{ padding: "8px 0" }}>
+      <div className="nodrag nowheel" style={{ padding: "4px 0 12px" }}>
         {def.inputs.map((inp) => (
-          <div key={inp.name} style={{ position: "relative", padding: "4px 14px" }}>
+          <div key={inp.name} style={{ position: "relative", padding: "3px 18px" }}>
+            <div style={{ fontSize: 10, fontWeight: 500, color: "#9ca3af", marginBottom: 3 }}>{inp.description}</div>
             <Handle
               type="target"
               position={Position.Left}
@@ -459,9 +461,9 @@ function FlowNode({ data, selected }: NodeProps) {
 
       {/* Output handles */}
       {def.outputs.length > 0 && (
-        <div style={{ padding: "4px 0 12px" }}>
+        <div style={{ padding: "8px 0 16px" }}>
           {def.outputs.map((out) => (
-            <div key={out.name} style={{ position: "relative", padding: "2px 18px", textAlign: "right" }}>
+            <div key={out.name} style={{ position: "relative", padding: "4px 18px", textAlign: "right" }}>
               <Handle
                 type="source"
                 position={Position.Right}

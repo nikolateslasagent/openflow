@@ -270,14 +270,15 @@ function FlowNode({ data, selected }) {
                             color: "#1a1a1a",
                             letterSpacing: "-0.2px",
                             fontFamily: "'SF Pro Display', 'Inter', -apple-system, sans-serif",
-                        }, children: def.name })] }), _jsx("div", { className: "nodrag nowheel", style: { padding: "4px 0 12px" }, children: def.inputs.map((inp) => (_jsxs("div", { style: { position: "relative", padding: "3px 18px" }, children: [_jsx("div", { style: { fontSize: 10, fontWeight: 500, color: "#9ca3af", marginBottom: 3 }, children: inp.description }), _jsx(Handle, { type: "target", position: Position.Left, id: inp.name, style: {
-                                width: 9,
-                                height: 9,
-                                background: "#d1d5db",
-                                border: "2px solid #ffffff",
-                                left: -5,
-                                boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-                            } }), inp.type === "string" && !inp.options && (inp.name === "prompt" || inp.name === "system" ? (_jsx("textarea", { onKeyDown: stopKeys, value: values[inp.name] || "", onChange: (e) => onChange(inp.name, e.target.value), placeholder: inp.description, rows: inp.name === "prompt" ? 3 : 2, style: {
+                        }, children: def.name })] }), def.inputs.length > 0 && (_jsx(Handle, { type: "target", position: Position.Left, id: "in", style: {
+                    width: 10,
+                    height: 10,
+                    background: "#d1d5db",
+                    border: "2px solid #ffffff",
+                    left: -6,
+                    top: "50%",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                } })), _jsx("div", { className: "nodrag nowheel", style: { padding: "4px 0 12px" }, children: def.inputs.map((inp) => (_jsxs("div", { style: { padding: "3px 18px" }, children: [_jsx("div", { style: { fontSize: 10, fontWeight: 500, color: "#9ca3af", marginBottom: 3 }, children: inp.description }), inp.type === "string" && !inp.options && (inp.name === "prompt" || inp.name === "system" ? (_jsx("textarea", { onKeyDown: stopKeys, value: values[inp.name] || "", onChange: (e) => onChange(inp.name, e.target.value), placeholder: inp.description, rows: inp.name === "prompt" ? 3 : 2, style: {
                                 width: "100%",
                                 background: "#f5f5f7",
                                 border: "none",
@@ -329,14 +330,15 @@ function FlowNode({ data, selected }) {
                 }, children: [_jsx("span", { style: {
                             width: 5, height: 5, borderRadius: "50%",
                             background: nodeStatus === "running" ? "#f59e0b" : nodeStatus === "done" ? "#22c55e" : "#ef4444",
-                        } }), nodeStatus === "running" ? "Generating..." : nodeStatus === "done" ? "Complete" : nodeStatus] })), def.outputs.length > 0 && (_jsx("div", { style: { padding: "8px 0 16px" }, children: def.outputs.map((out) => (_jsx("div", { style: { position: "relative", padding: "4px 18px", textAlign: "right" }, children: _jsx(Handle, { type: "source", position: Position.Right, id: out.name, style: {
-                            width: 9,
-                            height: 9,
-                            background: "#d1d5db",
-                            border: "2px solid #ffffff",
-                            right: -5,
-                            boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-                        } }) }, out.name))) }))] }));
+                        } }), nodeStatus === "running" ? "Generating..." : nodeStatus === "done" ? "Complete" : nodeStatus] })), def.outputs.length > 0 && (_jsx(Handle, { type: "source", position: Position.Right, id: "out", style: {
+                    width: 10,
+                    height: 10,
+                    background: "#d1d5db",
+                    border: "2px solid #ffffff",
+                    right: -6,
+                    top: "50%",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                } }))] }));
 }
 const nodeTypes = { flowNode: FlowNode };
 // ---------------------------------------------------------------------------

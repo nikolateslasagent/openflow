@@ -665,11 +665,10 @@ export default function App() {
   return (
     <div style={{ display: "flex", height: "100vh", background: "#f0f0f2", color: "#1a1a1a", fontFamily: "'SF Pro Display', 'Inter', -apple-system, 'Helvetica Neue', sans-serif" }}>
 
-      {/* Icon strip — thin left toolbar */}
+      {/* Icon strip — dark left toolbar */}
       <nav style={{
         width: 56,
-        background: "#ffffff",
-        borderRight: "1px solid #ebebee",
+        background: "#0e0e10",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -678,13 +677,13 @@ export default function App() {
         flexShrink: 0,
         zIndex: 20,
       }}>
-        {/* Logo */}
+        {/* Logo — circle */}
         <div style={{
-          width: 34, height: 34, borderRadius: 10,
-          background: "#1a1a1a", color: "#fff",
+          width: 36, height: 36, borderRadius: "50%",
+          background: "#c8f542",
           display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 14, fontWeight: 800, marginBottom: 20, letterSpacing: "-0.5px",
-          cursor: "pointer",
+          fontSize: 13, fontWeight: 800, color: "#0e0e10", marginBottom: 24,
+          cursor: "pointer", letterSpacing: "-0.5px",
         }}
           title="OpenFlow"
           onClick={() => setActivePanel(null)}
@@ -701,15 +700,15 @@ export default function App() {
             style={{
               width: 38, height: 38, borderRadius: 10,
               border: "none",
-              background: activePanel === cat ? "#f0f0f2" : "transparent",
-              color: activePanel === cat ? "#1a1a1a" : "#9ca3af",
+              background: activePanel === cat ? "#1e1e22" : "transparent",
+              color: activePanel === cat ? "#c8f542" : "#6b6b75",
               cursor: "pointer",
               display: "flex", alignItems: "center", justifyContent: "center",
               marginBottom: 4,
               transition: "all 0.15s",
             }}
-            onMouseOver={(e) => { if (activePanel !== cat) e.currentTarget.style.color = "#6b7280"; }}
-            onMouseOut={(e) => { if (activePanel !== cat) e.currentTarget.style.color = "#9ca3af"; }}
+            onMouseOver={(e) => { if (activePanel !== cat) e.currentTarget.style.color = "#9ca3af"; }}
+            onMouseOut={(e) => { if (activePanel !== cat) e.currentTarget.style.color = "#6b6b75"; }}
             dangerouslySetInnerHTML={{ __html: SVG_ICONS[cat] || "" }}
           />
         ))}
@@ -723,8 +722,8 @@ export default function App() {
           style={{
             width: 38, height: 38, borderRadius: 10,
             border: "none",
-            background: activePanel === "settings" ? "#f0f0f2" : "transparent",
-            color: activePanel === "settings" ? "#1a1a1a" : "#9ca3af",
+            background: activePanel === "settings" ? "#1e1e22" : "transparent",
+            color: activePanel === "settings" ? "#c8f542" : "#6b6b75",
             cursor: "pointer",
             display: "flex", alignItems: "center", justifyContent: "center",
             marginBottom: 4,
@@ -740,8 +739,8 @@ export default function App() {
           style={{
             width: 38, height: 38, borderRadius: 10,
             border: "none",
-            background: isRunning ? "#e5e7eb" : "#1a1a1a",
-            color: "#ffffff",
+            background: isRunning ? "#2a2a30" : "#c8f542",
+            color: isRunning ? "#6b6b75" : "#0e0e10",
             cursor: isRunning ? "not-allowed" : "pointer",
             display: "flex", alignItems: "center", justifyContent: "center",
           }}

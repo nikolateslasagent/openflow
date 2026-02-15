@@ -23,7 +23,9 @@ const NODE_DEFS = [
         category: "input",
         icon: "✏️",
         color: "#6366f1",
-        inputs: [],
+        inputs: [
+            { name: "text", type: "string", description: "Text", required: true },
+        ],
         outputs: [{ name: "text", type: "string", description: "Text output" }],
     },
     {

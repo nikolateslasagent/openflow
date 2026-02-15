@@ -333,32 +333,127 @@ function FlowNode({ data, selected }: NodeProps) {
   const onChange = data.onChange as (key: string, val: unknown) => void;
   const outputUrl = data.outputUrl as string | undefined;
   const nodeStatus = data.status as string | undefined;
+  const [showMenu, setShowMenu] = useState(false);
+  const [editing, setEditing] = useState(true);
 
+  const isComplete = nodeStatus === "done" && outputUrl;
+  const showForm = editing || !isComplete;
+
+  // Auto-collapse form when generation completes
+  if (isComplete && editing && nodeStatus === "done") {
+    // Will be set to false on next render cycle
+  }
+
+  const cardStyle = {
+    background: "#ffffff",
+    border: selected ? "1.5px solid #d1d5db" : "1px solid #e8e8eb",
+    borderRadius: 16,
+    minWidth: 260,
+    maxWidth: 360,
+    overflow: "visible" as const,
+    fontFamily: "'Inter', -apple-system, 'Helvetica Neue', sans-serif",
+    boxShadow: selected
+      ? "0 8px 30px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04)"
+      : "0 2px 12px rgba(0,0,0,0.04), 0 1px 4px rgba(0,0,0,0.02)",
+    transition: "box-shadow 0.2s, border-color 0.2s",
+  };
+
+  // ---------- COMPLETED STATE ----------
+  if (isComplete && !showForm) {
+    const model = (values.model as string) || "";
+    const prompt = (values.prompt as string) || (values.text as string) || "";
+    const w = values.width ? String(values.width) : "";
+    const h = values.height ? String(values.height) : "";
+    const dur = values.duration ? `${values.duration}s` : "";
+    const aspectRatio = w && h ? `${Number(w) > Number(h) ? "16:9" : Number(w) === Number(h) ? "1:1" : "9:16"}` : "";
+    const resolution = h ? `${h}p` : "";
+
+    return (
+      <div style={cardStyle}>
+        {/* Header with check + three dots */}
+        <div style={{ padding: "14px 18px 8px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ color: "#6b7280", display: "flex" }} dangerouslySetInnerHTML={{ __html: NODE_ICONS[def.id] || "" }} />
+            <span style={{ color: "#22c55e", fontSize: 14 }}>✓</span>
+            <span style={{ fontSize: 12, fontWeight: 600, color: "#1a1a1a" }}>
+              {def.category === "video" ? "Generate Video" : def.category === "image" ? "Generate Image" : def.name}
+            </span>
+          </div>
+          <div style={{ position: "relative" }}>
+            <button
+              onClick={() => setShowMenu(!showMenu)}
+              style={{
+                width: 28, height: 28, borderRadius: 6,
+                border: "1px solid #e8e8eb", background: "#ffffff",
+                cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 14, color: "#6b7280",
+              }}
+            >⋮</button>
+            {showMenu && (
+              <div style={{
+                position: "absolute", right: 0, top: 32, background: "#fff",
+                border: "1px solid #e8e8eb", borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.1)",
+                zIndex: 50, minWidth: 140, overflow: "hidden",
+              }}>
+                {[
+                  { label: "Edit Settings", action: () => { setEditing(true); setShowMenu(false); } },
+                  { label: "Retry", action: () => { const onRun = data.onRun as (() => void) | undefined; if (onRun) onRun(); setShowMenu(false); } },
+                  { label: "Delete", action: () => { const onDelete = data.onDelete as (() => void) | undefined; if (onDelete) onDelete(); setShowMenu(false); } },
+                ].map((item) => (
+                  <button
+                    key={item.label}
+                    onClick={item.action}
+                    style={{
+                      width: "100%", padding: "10px 14px", border: "none", background: "transparent",
+                      fontSize: 12, fontWeight: 500, color: item.label === "Delete" ? "#ef4444" : "#1a1a1a",
+                      cursor: "pointer", textAlign: "left",
+                    }}
+                    onMouseOver={(e) => { e.currentTarget.style.background = "#f5f5f7"; }}
+                    onMouseOut={(e) => { e.currentTarget.style.background = "transparent"; }}
+                  >{item.label}</button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Summary info */}
+        <div style={{ padding: "0 18px 10px", fontSize: 12, color: "#6b7280", lineHeight: 2 }}>
+          {dur && <div>⏱ {dur}</div>}
+          {aspectRatio && <div>▢ {aspectRatio}</div>}
+          {resolution && <div>◫ {resolution}</div>}
+          <div>◎ {model}</div>
+          <div style={{ color: "#9ca3af", fontSize: 11, marginTop: 4, fontStyle: "italic" }}>{prompt.length > 60 ? prompt.slice(0, 60) + "..." : prompt}</div>
+        </div>
+
+        {/* Output */}
+        <div style={{ padding: "0 18px 16px" }}>
+          {def.category === "video" ? (
+            <video src={outputUrl} controls autoPlay loop muted style={{ width: "100%", borderRadius: 12 }} />
+          ) : (
+            <img src={outputUrl} alt="output" style={{ width: "100%", borderRadius: 12, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }} />
+          )}
+        </div>
+
+        {/* Handles */}
+        {def.inputs.length > 0 && (
+          <Handle type="target" position={Position.Left} id="in" style={{ width: 10, height: 10, background: "#d1d5db", border: "2px solid #ffffff", left: -6, top: "50%", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }} />
+        )}
+        {def.outputs.length > 0 && (
+          <Handle type="source" position={Position.Right} id="out" style={{ width: 10, height: 10, background: "#d1d5db", border: "2px solid #ffffff", right: -6, top: "50%", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }} />
+        )}
+      </div>
+    );
+  }
+
+  // ---------- EDITING / GENERATING STATE ----------
   return (
-    <div
-      style={{
-        background: "#ffffff",
-        border: selected ? "1.5px solid #d1d5db" : "1px solid #e8e8eb",
-        borderRadius: 16,
-        minWidth: 240,
-        maxWidth: 340,
-        overflow: "visible",
-        fontFamily: "'Inter', -apple-system, 'Helvetica Neue', sans-serif",
-        boxShadow: selected
-          ? "0 8px 30px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04)"
-          : "0 2px 12px rgba(0,0,0,0.04), 0 1px 4px rgba(0,0,0,0.02)",
-        transition: "box-shadow 0.2s, border-color 0.2s",
-      }}
-    >
+    <div style={cardStyle}>
       {/* Header */}
       <div style={{ padding: "14px 18px 10px", display: "flex", alignItems: "center", gap: 8 }}>
         <span style={{ color: "#6b7280", display: "flex" }} dangerouslySetInnerHTML={{ __html: NODE_ICONS[def.id] || "" }} />
         <span style={{
-          fontSize: 12,
-          fontWeight: 600,
-          color: "#1a1a1a",
-          letterSpacing: "-0.2px",
-          fontFamily: "'SF Pro Display', 'Inter', -apple-system, sans-serif",
+          fontSize: 12, fontWeight: 600, color: "#1a1a1a", letterSpacing: "-0.2px",
         }}>
           {def.name}
         </span>
@@ -366,20 +461,7 @@ function FlowNode({ data, selected }: NodeProps) {
 
       {/* Single input handle */}
       {def.inputs.length > 0 && (
-        <Handle
-          type="target"
-          position={Position.Left}
-          id="in"
-          style={{
-            width: 10,
-            height: 10,
-            background: "#d1d5db",
-            border: "2px solid #ffffff",
-            left: -6,
-            top: "50%",
-            boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-          }}
-        />
+        <Handle type="target" position={Position.Left} id="in" style={{ width: 10, height: 10, background: "#d1d5db", border: "2px solid #ffffff", left: -6, top: "50%", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }} />
       )}
 
       {/* Input fields */}
@@ -388,110 +470,55 @@ function FlowNode({ data, selected }: NodeProps) {
           <div key={inp.name} style={{ padding: "3px 18px" }}>
             <div style={{ fontSize: 10, fontWeight: 500, color: "#9ca3af", marginBottom: 3 }}>{inp.description}</div>
             {inp.type === "string" && !inp.options && (
-              inp.name === "prompt" || inp.name === "system" ? (
+              inp.name === "prompt" || inp.name === "system" || inp.name === "text" ? (
                 <textarea onKeyDown={stopKeys}
                   value={(values[inp.name] as string) || ""}
                   onChange={(e) => onChange(inp.name, e.target.value)}
                   placeholder={inp.description}
-                  rows={inp.name === "prompt" ? 3 : 2}
-                  style={{
-                    width: "100%",
-                    background: "#f5f5f7",
-                    border: "none",
-                    borderRadius: 10,
-                    color: "#1a1a1a",
-                    fontSize: 14,
-                    padding: "10px 14px",
-                    resize: "vertical",
-                    outline: "none",
-                    fontFamily: "inherit",
-                    lineHeight: 1.5,
-                  }}
+                  rows={3}
+                  style={{ width: "100%", background: "#f5f5f7", border: "none", borderRadius: 10, color: "#1a1a1a", fontSize: 14, padding: "10px 14px", resize: "vertical", outline: "none", fontFamily: "inherit", lineHeight: 1.5 }}
                 />
               ) : (
-                <input onKeyDown={stopKeys}
-                  type="text"
-                  value={(values[inp.name] as string) || ""}
-                  onChange={(e) => onChange(inp.name, e.target.value)}
-                  placeholder={inp.description}
-                  style={{
-                    width: "100%",
-                    background: "#f5f5f7",
-                    border: "none",
-                    borderRadius: 10,
-                    color: "#1a1a1a",
-                    fontSize: 13,
-                    padding: "8px 14px",
-                    outline: "none",
-                  }}
+                <input onKeyDown={stopKeys} type="text" value={(values[inp.name] as string) || ""} onChange={(e) => onChange(inp.name, e.target.value)} placeholder={inp.description}
+                  style={{ width: "100%", background: "#f5f5f7", border: "none", borderRadius: 10, color: "#1a1a1a", fontSize: 13, padding: "8px 14px", outline: "none" }}
                 />
               )
             )}
             {inp.options && (
-              <select onKeyDown={stopKeys}
-                value={String(values[inp.name] ?? inp.default ?? "")}
-                onChange={(e) => onChange(inp.name, e.target.value)}
-                style={{
-                  width: "100%",
-                  background: "#f5f5f7",
-                  border: "none",
-                  borderRadius: 10,
-                  color: "#1a1a1a",
-                  fontSize: 13,
-                  padding: "8px 14px",
-                  outline: "none",
-                  cursor: "pointer",
-                  WebkitAppearance: "none",
-                }}
+              <select onKeyDown={stopKeys} value={String(values[inp.name] ?? inp.default ?? "")} onChange={(e) => onChange(inp.name, e.target.value)}
+                style={{ width: "100%", background: "#f5f5f7", border: "none", borderRadius: 10, color: "#1a1a1a", fontSize: 13, padding: "8px 14px", outline: "none", cursor: "pointer", WebkitAppearance: "none" }}
               >
-                {inp.options.map((opt) => (
-                  <option key={opt} value={opt}>{opt}</option>
-                ))}
+                {inp.options.map((opt) => (<option key={opt} value={opt}>{opt}</option>))}
               </select>
             )}
             {(inp.type === "integer" || inp.type === "float") && !inp.options && (
-              <input onKeyDown={stopKeys}
-                type="number"
-                value={String(values[inp.name] ?? inp.default ?? "")}
+              <input onKeyDown={stopKeys} type="number" value={String(values[inp.name] ?? inp.default ?? "")}
                 onChange={(e) => onChange(inp.name, inp.type === "float" ? parseFloat(e.target.value) : parseInt(e.target.value))}
                 step={inp.type === "float" ? 0.1 : 1}
-                style={{
-                  width: "100%",
-                  background: "#f5f5f7",
-                  border: "none",
-                  borderRadius: 10,
-                  color: "#1a1a1a",
-                  fontSize: 13,
-                  padding: "8px 14px",
-                  outline: "none",
-                }}
+                style={{ width: "100%", background: "#f5f5f7", border: "none", borderRadius: 10, color: "#1a1a1a", fontSize: 13, padding: "8px 14px", outline: "none" }}
               />
             )}
           </div>
         ))}
       </div>
 
-      {/* Generate button on nodes with model input */}
+      {/* Generate button */}
       {def.inputs.some((inp) => inp.name === "model") && (
         <div style={{ padding: "4px 18px 8px" }}>
           <button
             onClick={() => {
+              setEditing(false);
               const onRun = data.onRun as (() => void) | undefined;
               if (onRun) onRun();
             }}
             disabled={nodeStatus === "running"}
             style={{
-              width: "100%",
-              padding: "10px",
+              width: "100%", padding: "10px",
               background: nodeStatus === "running" ? "#e5e7eb" : "#c026d3",
-              color: nodeStatus === "running" ? "#9ca3af" : "#0e0e10",
-              border: "none",
-              borderRadius: 10,
-              fontSize: 13,
-              fontWeight: 600,
+              color: nodeStatus === "running" ? "#9ca3af" : "#ffffff",
+              border: "none", borderRadius: 10, fontSize: 13, fontWeight: 600,
               cursor: nodeStatus === "running" ? "not-allowed" : "pointer",
               transition: "background 0.15s",
-              letterSpacing: "-0.2px",
             }}
           >
             {nodeStatus === "running" ? "Generating..." : "Generate ✦"}
@@ -499,64 +526,17 @@ function FlowNode({ data, selected }: NodeProps) {
         </div>
       )}
 
-      {/* Output preview */}
-      {outputUrl && (
-        <div style={{ padding: "8px 18px 12px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-            <span style={{ fontSize: 11, fontWeight: 600, color: "#6b7280" }}>
-              {def.category === "video" ? "Video" : def.category === "image" ? "Image" : "Output"}
-            </span>
-            <span style={{ fontSize: 11, fontWeight: 500, color: "#9ca3af" }}>
-              {(values.model as string) || ""}
-            </span>
-          </div>
-        </div>
-      )}
-      {outputUrl && (
-        <div style={{ padding: "0 18px 12px" }}>
-          {(def.category === "video") ? (
-            <video src={outputUrl} controls autoPlay loop muted style={{ width: "100%", borderRadius: 12 }} />
-          ) : (
-            <img src={outputUrl} alt="output" style={{ width: "100%", borderRadius: 12, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }} />
-          )}
-        </div>
-      )}
-
-      {/* Status indicator */}
-      {nodeStatus && (
-        <div style={{
-          padding: "8px 18px 12px",
-          fontSize: 11,
-          fontWeight: 500,
-          color: nodeStatus === "running" ? "#92400e" : nodeStatus === "done" ? "#166534" : "#991b1b",
-          display: "flex",
-          alignItems: "center",
-          gap: 6,
-        }}>
-          <span style={{
-            width: 5, height: 5, borderRadius: "50%",
-            background: nodeStatus === "running" ? "#f59e0b" : nodeStatus === "done" ? "#22c55e" : "#ef4444",
-          }} />
-          {nodeStatus === "running" ? "Generating..." : nodeStatus === "done" ? "Complete" : nodeStatus}
+      {/* Status indicator while generating */}
+      {nodeStatus && nodeStatus !== "done" && (
+        <div style={{ padding: "8px 18px 12px", fontSize: 11, fontWeight: 500, color: nodeStatus === "running" ? "#92400e" : "#991b1b", display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{ width: 5, height: 5, borderRadius: "50%", background: nodeStatus === "running" ? "#f59e0b" : "#ef4444" }} />
+          {nodeStatus === "running" ? "Generating..." : nodeStatus}
         </div>
       )}
 
       {/* Single output handle */}
       {def.outputs.length > 0 && (
-        <Handle
-          type="source"
-          position={Position.Right}
-          id="out"
-          style={{
-            width: 10,
-            height: 10,
-            background: "#d1d5db",
-            border: "2px solid #ffffff",
-            right: -6,
-            top: "50%",
-            boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-          }}
-        />
+        <Handle type="source" position={Position.Right} id="out" style={{ width: 10, height: 10, background: "#d1d5db", border: "2px solid #ffffff", right: -6, top: "50%", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }} />
       )}
     </div>
   );
@@ -637,7 +617,7 @@ export default function App() {
           def,
           values: defaults,
           onChange: (key: string, val: unknown) => updateNodeValue(nodeId, key, val),
-          onRun: () => runSingleNodeRef.current(nodeId),
+          onRun: () => runSingleNodeRef.current(nodeId), onDelete: () => setNodes((nds: Node[]) => nds.filter((n: Node) => n.id !== nodeId)),
         },
       };
       setNodes((nds) => [...nds, newNode]);
@@ -736,7 +716,7 @@ export default function App() {
           def,
           values: defaults,
           onChange: (key: string, val: unknown) => updateNodeValue(nodeId, key, val),
-          onRun: () => runSingleNodeRef.current(nodeId),
+          onRun: () => runSingleNodeRef.current(nodeId), onDelete: () => setNodes((nds: Node[]) => nds.filter((n: Node) => n.id !== nodeId)),
         },
       };
       setNodes((nds) => [...nds, newNode]);

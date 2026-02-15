@@ -38,7 +38,7 @@ const NODE_DEFS = [
         inputs: [
             { name: "prompt", type: "string", description: "Text prompt", required: true },
             { name: "negative_prompt", type: "string", description: "Negative prompt", default: "" },
-            { name: "model", type: "string", description: "Model", default: "flux-pro", options: ["flux-2-pro", "flux-2-dev-lora", "flux-2-flex", "flux-pro-1.1-ultra", "flux-pro-1.1", "flux-fast", "sd-3.5", "dall-e-3", "gpt-image-1.5", "imagen-4", "imagen-3", "imagen-3-fast", "ideogram-v3", "recraft-v3", "reve", "higgsfield-image"] },
+            { name: "model", type: "string", description: "Model", default: "flux-2-pro", options: ["flux-2-pro", "flux-2-dev-lora", "flux-2-flex", "flux-pro-1.1-ultra", "flux-pro-1.1", "flux-fast", "nano-banana-pro", "sd-3.5", "dall-e-3", "gpt-image-1.5", "grok-image", "imagen-4", "imagen-3", "imagen-3-fast", "ideogram-v3", "recraft-v3", "reve", "higgsfield-image"] },
             { name: "width", type: "integer", description: "Width", default: 1024, options: ["512", "768", "1024", "1280", "1536"] },
             { name: "height", type: "integer", description: "Height", default: 1024, options: ["512", "768", "1024", "1280", "1536"] },
             { name: "guidance_scale", type: "float", description: "Guidance Scale", default: 7.5 },
@@ -60,7 +60,7 @@ const NODE_DEFS = [
         inputs: [
             { name: "prompt", type: "string", description: "Text prompt", required: true },
             { name: "negative_prompt", type: "string", description: "Negative prompt", default: "" },
-            { name: "model", type: "string", description: "Model", default: "wan-2.1", options: ["wan-2.1", "wan-2.1-1.3b", "kling-2.0", "kling-1.6-pro", "minimax-hailuo", "hunyuan", "luma-ray-2", "ltx-video", "grok-video", "cogvideox-5b", "mochi-v1"] },
+            { name: "model", type: "string", description: "Model", default: "wan-2.1", options: ["kling-3.0-pro", "kling-2.6-pro", "kling-2.0", "wan-2.1", "wan-2.1-1.3b", "minimax-hailuo", "hunyuan", "luma-ray-2", "ltx-video", "ltx-2-19b", "veo-3.1", "grok-video", "cogvideox-5b", "mochi-v1"] },
             { name: "duration", type: "integer", description: "Duration (sec)", default: 4, options: ["2", "4", "6", "8", "10"] },
             { name: "fps", type: "integer", description: "FPS", default: 24, options: ["12", "24", "30"] },
             { name: "width", type: "integer", description: "Width", default: 1280, options: ["512", "768", "1024", "1280"] },
@@ -218,15 +218,20 @@ const FAL_MODELS = {
     "recraft-v3": "fal-ai/recraft-v3",
     "reve": "fal-ai/reve",
     "higgsfield-image": "fal-ai/higgsfield",
+    "nano-banana-pro": "fal-ai/nano-banana-pro",
+    "grok-image": "fal-ai/grok-imagine-image",
     "wan-2.1": "fal-ai/wan/v2.1",
     "wan-2.1-1.3b": "fal-ai/wan/v2.1/1.3b",
+    "kling-3.0-pro": "fal-ai/kling-video/v3/pro/text-to-video",
+    "kling-2.6-pro": "fal-ai/kling-video/v2.6/pro/text-to-video",
     "kling-2.0": "fal-ai/kling-video/v2/master/text-to-video",
-    "kling-1.6-pro": "fal-ai/kling-video/v1.6/pro/text-to-video",
     "minimax-hailuo": "fal-ai/minimax-video/video-01-live/text-to-video",
     "minimax-hailuo-i2v": "fal-ai/minimax-video/image-to-video",
     "hunyuan": "fal-ai/hunyuan-video",
     "luma-ray-2": "fal-ai/luma-dream-machine",
     "ltx-video": "fal-ai/ltx-video",
+    "ltx-2-19b": "fal-ai/ltx-video/ltx-2-19b/image-to-video",
+    "veo-3.1": "fal-ai/veo3/v3.1/image-to-video",
     "grok-video": "fal-ai/grok-imagine-video",
     "cogvideox-5b": "fal-ai/cogvideox-5b",
     "mochi-v1": "fal-ai/mochi-v1",
@@ -285,109 +290,73 @@ function FlowNode({ data, selected }) {
     const onChange = data.onChange;
     const outputUrl = data.outputUrl;
     const nodeStatus = data.status;
-    return (_jsxs("div", { style: {
-            background: "#ffffff",
-            border: selected ? "1.5px solid #d1d5db" : "1px solid #e8e8eb",
-            borderRadius: 16,
-            minWidth: 240,
-            maxWidth: 340,
-            overflow: "visible",
-            fontFamily: "'Inter', -apple-system, 'Helvetica Neue', sans-serif",
-            boxShadow: selected
-                ? "0 8px 30px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04)"
-                : "0 2px 12px rgba(0,0,0,0.04), 0 1px 4px rgba(0,0,0,0.02)",
-            transition: "box-shadow 0.2s, border-color 0.2s",
-        }, children: [_jsxs("div", { style: { padding: "14px 18px 10px", display: "flex", alignItems: "center", gap: 8 }, children: [_jsx("span", { style: { color: "#6b7280", display: "flex" }, dangerouslySetInnerHTML: { __html: NODE_ICONS[def.id] || "" } }), _jsx("span", { style: {
-                            fontSize: 12,
-                            fontWeight: 600,
-                            color: "#1a1a1a",
-                            letterSpacing: "-0.2px",
-                            fontFamily: "'SF Pro Display', 'Inter', -apple-system, sans-serif",
-                        }, children: def.name })] }), def.inputs.length > 0 && (_jsx(Handle, { type: "target", position: Position.Left, id: "in", style: {
-                    width: 10,
-                    height: 10,
-                    background: "#d1d5db",
-                    border: "2px solid #ffffff",
-                    left: -6,
-                    top: "50%",
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-                } })), _jsx("div", { className: "nodrag nowheel", style: { padding: "4px 0 12px" }, children: def.inputs.map((inp) => (_jsxs("div", { style: { padding: "3px 18px" }, children: [_jsx("div", { style: { fontSize: 10, fontWeight: 500, color: "#9ca3af", marginBottom: 3 }, children: inp.description }), inp.type === "string" && !inp.options && (inp.name === "prompt" || inp.name === "system" ? (_jsx("textarea", { onKeyDown: stopKeys, value: values[inp.name] || "", onChange: (e) => onChange(inp.name, e.target.value), placeholder: inp.description, rows: inp.name === "prompt" ? 3 : 2, style: {
-                                width: "100%",
-                                background: "#f5f5f7",
-                                border: "none",
-                                borderRadius: 10,
-                                color: "#1a1a1a",
-                                fontSize: 14,
-                                padding: "10px 14px",
-                                resize: "vertical",
-                                outline: "none",
-                                fontFamily: "inherit",
-                                lineHeight: 1.5,
-                            } })) : (_jsx("input", { onKeyDown: stopKeys, type: "text", value: values[inp.name] || "", onChange: (e) => onChange(inp.name, e.target.value), placeholder: inp.description, style: {
-                                width: "100%",
-                                background: "#f5f5f7",
-                                border: "none",
-                                borderRadius: 10,
-                                color: "#1a1a1a",
-                                fontSize: 13,
-                                padding: "8px 14px",
-                                outline: "none",
-                            } }))), inp.options && (_jsx("select", { onKeyDown: stopKeys, value: String(values[inp.name] ?? inp.default ?? ""), onChange: (e) => onChange(inp.name, e.target.value), style: {
-                                width: "100%",
-                                background: "#f5f5f7",
-                                border: "none",
-                                borderRadius: 10,
-                                color: "#1a1a1a",
-                                fontSize: 13,
-                                padding: "8px 14px",
-                                outline: "none",
-                                cursor: "pointer",
-                                WebkitAppearance: "none",
-                            }, children: inp.options.map((opt) => (_jsx("option", { value: opt, children: opt }, opt))) })), (inp.type === "integer" || inp.type === "float") && !inp.options && (_jsx("input", { onKeyDown: stopKeys, type: "number", value: String(values[inp.name] ?? inp.default ?? ""), onChange: (e) => onChange(inp.name, inp.type === "float" ? parseFloat(e.target.value) : parseInt(e.target.value)), step: inp.type === "float" ? 0.1 : 1, style: {
-                                width: "100%",
-                                background: "#f5f5f7",
-                                border: "none",
-                                borderRadius: 10,
-                                color: "#1a1a1a",
-                                fontSize: 13,
-                                padding: "8px 14px",
-                                outline: "none",
-                            } }))] }, inp.name))) }), def.inputs.some((inp) => inp.name === "model") && (_jsx("div", { style: { padding: "4px 18px 8px" }, children: _jsx("button", { onClick: () => {
+    const [showMenu, setShowMenu] = useState(false);
+    const [editing, setEditing] = useState(true);
+    const isComplete = nodeStatus === "done" && outputUrl;
+    const showForm = editing || !isComplete;
+    // Auto-collapse form when generation completes
+    if (isComplete && editing && nodeStatus === "done") {
+        // Will be set to false on next render cycle
+    }
+    const cardStyle = {
+        background: "#ffffff",
+        border: selected ? "1.5px solid #d1d5db" : "1px solid #e8e8eb",
+        borderRadius: 16,
+        minWidth: 260,
+        maxWidth: 360,
+        overflow: "visible",
+        fontFamily: "'Inter', -apple-system, 'Helvetica Neue', sans-serif",
+        boxShadow: selected
+            ? "0 8px 30px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04)"
+            : "0 2px 12px rgba(0,0,0,0.04), 0 1px 4px rgba(0,0,0,0.02)",
+        transition: "box-shadow 0.2s, border-color 0.2s",
+    };
+    // ---------- COMPLETED STATE ----------
+    if (isComplete && !showForm) {
+        const model = values.model || "";
+        const prompt = values.prompt || values.text || "";
+        const w = values.width ? String(values.width) : "";
+        const h = values.height ? String(values.height) : "";
+        const dur = values.duration ? `${values.duration}s` : "";
+        const aspectRatio = w && h ? `${Number(w) > Number(h) ? "16:9" : Number(w) === Number(h) ? "1:1" : "9:16"}` : "";
+        const resolution = h ? `${h}p` : "";
+        return (_jsxs("div", { style: cardStyle, children: [_jsxs("div", { style: { padding: "14px 18px 8px", display: "flex", alignItems: "center", justifyContent: "space-between" }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8 }, children: [_jsx("span", { style: { color: "#6b7280", display: "flex" }, dangerouslySetInnerHTML: { __html: NODE_ICONS[def.id] || "" } }), _jsx("span", { style: { color: "#22c55e", fontSize: 14 }, children: "\u2713" }), _jsx("span", { style: { fontSize: 12, fontWeight: 600, color: "#1a1a1a" }, children: def.category === "video" ? "Generate Video" : def.category === "image" ? "Generate Image" : def.name })] }), _jsxs("div", { style: { position: "relative" }, children: [_jsx("button", { onClick: () => setShowMenu(!showMenu), style: {
+                                        width: 28, height: 28, borderRadius: 6,
+                                        border: "1px solid #e8e8eb", background: "#ffffff",
+                                        cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                                        fontSize: 14, color: "#6b7280",
+                                    }, children: "\u22EE" }), showMenu && (_jsx("div", { style: {
+                                        position: "absolute", right: 0, top: 32, background: "#fff",
+                                        border: "1px solid #e8e8eb", borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.1)",
+                                        zIndex: 50, minWidth: 140, overflow: "hidden",
+                                    }, children: [
+                                        { label: "Edit Settings", action: () => { setEditing(true); setShowMenu(false); } },
+                                        { label: "Retry", action: () => { const onRun = data.onRun; if (onRun)
+                                                onRun(); setShowMenu(false); } },
+                                        { label: "Delete", action: () => { const onDelete = data.onDelete; if (onDelete)
+                                                onDelete(); setShowMenu(false); } },
+                                    ].map((item) => (_jsx("button", { onClick: item.action, style: {
+                                            width: "100%", padding: "10px 14px", border: "none", background: "transparent",
+                                            fontSize: 12, fontWeight: 500, color: item.label === "Delete" ? "#ef4444" : "#1a1a1a",
+                                            cursor: "pointer", textAlign: "left",
+                                        }, onMouseOver: (e) => { e.currentTarget.style.background = "#f5f5f7"; }, onMouseOut: (e) => { e.currentTarget.style.background = "transparent"; }, children: item.label }, item.label))) }))] })] }), _jsxs("div", { style: { padding: "0 18px 10px", fontSize: 12, color: "#6b7280", lineHeight: 2 }, children: [dur && _jsxs("div", { children: ["\u23F1 ", dur] }), aspectRatio && _jsxs("div", { children: ["\u25A2 ", aspectRatio] }), resolution && _jsxs("div", { children: ["\u25EB ", resolution] }), _jsxs("div", { children: ["\u25CE ", model] }), _jsx("div", { style: { color: "#9ca3af", fontSize: 11, marginTop: 4, fontStyle: "italic" }, children: prompt.length > 60 ? prompt.slice(0, 60) + "..." : prompt })] }), _jsx("div", { style: { padding: "0 18px 16px" }, children: def.category === "video" ? (_jsx("video", { src: outputUrl, controls: true, autoPlay: true, loop: true, muted: true, style: { width: "100%", borderRadius: 12 } })) : (_jsx("img", { src: outputUrl, alt: "output", style: { width: "100%", borderRadius: 12, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" } })) }), def.inputs.length > 0 && (_jsx(Handle, { type: "target", position: Position.Left, id: "in", style: { width: 10, height: 10, background: "#d1d5db", border: "2px solid #ffffff", left: -6, top: "50%", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" } })), def.outputs.length > 0 && (_jsx(Handle, { type: "source", position: Position.Right, id: "out", style: { width: 10, height: 10, background: "#d1d5db", border: "2px solid #ffffff", right: -6, top: "50%", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" } }))] }));
+    }
+    // ---------- EDITING / GENERATING STATE ----------
+    return (_jsxs("div", { style: cardStyle, children: [_jsxs("div", { style: { padding: "14px 18px 10px", display: "flex", alignItems: "center", gap: 8 }, children: [_jsx("span", { style: { color: "#6b7280", display: "flex" }, dangerouslySetInnerHTML: { __html: NODE_ICONS[def.id] || "" } }), _jsx("span", { style: {
+                            fontSize: 12, fontWeight: 600, color: "#1a1a1a", letterSpacing: "-0.2px",
+                        }, children: def.name })] }), def.inputs.length > 0 && (_jsx(Handle, { type: "target", position: Position.Left, id: "in", style: { width: 10, height: 10, background: "#d1d5db", border: "2px solid #ffffff", left: -6, top: "50%", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" } })), _jsx("div", { className: "nodrag nowheel", style: { padding: "4px 0 12px" }, children: def.inputs.map((inp) => (_jsxs("div", { style: { padding: "3px 18px" }, children: [_jsx("div", { style: { fontSize: 10, fontWeight: 500, color: "#9ca3af", marginBottom: 3 }, children: inp.description }), inp.type === "string" && !inp.options && (inp.name === "prompt" || inp.name === "system" || inp.name === "text" ? (_jsx("textarea", { onKeyDown: stopKeys, value: values[inp.name] || "", onChange: (e) => onChange(inp.name, e.target.value), placeholder: inp.description, rows: 3, style: { width: "100%", background: "#f5f5f7", border: "none", borderRadius: 10, color: "#1a1a1a", fontSize: 14, padding: "10px 14px", resize: "vertical", outline: "none", fontFamily: "inherit", lineHeight: 1.5 } })) : (_jsx("input", { onKeyDown: stopKeys, type: "text", value: values[inp.name] || "", onChange: (e) => onChange(inp.name, e.target.value), placeholder: inp.description, style: { width: "100%", background: "#f5f5f7", border: "none", borderRadius: 10, color: "#1a1a1a", fontSize: 13, padding: "8px 14px", outline: "none" } }))), inp.options && (_jsx("select", { onKeyDown: stopKeys, value: String(values[inp.name] ?? inp.default ?? ""), onChange: (e) => onChange(inp.name, e.target.value), style: { width: "100%", background: "#f5f5f7", border: "none", borderRadius: 10, color: "#1a1a1a", fontSize: 13, padding: "8px 14px", outline: "none", cursor: "pointer", WebkitAppearance: "none" }, children: inp.options.map((opt) => (_jsx("option", { value: opt, children: opt }, opt))) })), (inp.type === "integer" || inp.type === "float") && !inp.options && (_jsx("input", { onKeyDown: stopKeys, type: "number", value: String(values[inp.name] ?? inp.default ?? ""), onChange: (e) => onChange(inp.name, inp.type === "float" ? parseFloat(e.target.value) : parseInt(e.target.value)), step: inp.type === "float" ? 0.1 : 1, style: { width: "100%", background: "#f5f5f7", border: "none", borderRadius: 10, color: "#1a1a1a", fontSize: 13, padding: "8px 14px", outline: "none" } }))] }, inp.name))) }), def.inputs.some((inp) => inp.name === "model") && (_jsx("div", { style: { padding: "4px 18px 8px" }, children: _jsx("button", { onClick: () => {
+                        setEditing(false);
                         const onRun = data.onRun;
                         if (onRun)
                             onRun();
                     }, disabled: nodeStatus === "running", style: {
-                        width: "100%",
-                        padding: "10px",
+                        width: "100%", padding: "10px",
                         background: nodeStatus === "running" ? "#e5e7eb" : "#c026d3",
-                        color: nodeStatus === "running" ? "#9ca3af" : "#0e0e10",
-                        border: "none",
-                        borderRadius: 10,
-                        fontSize: 13,
-                        fontWeight: 600,
+                        color: nodeStatus === "running" ? "#9ca3af" : "#ffffff",
+                        border: "none", borderRadius: 10, fontSize: 13, fontWeight: 600,
                         cursor: nodeStatus === "running" ? "not-allowed" : "pointer",
                         transition: "background 0.15s",
-                        letterSpacing: "-0.2px",
-                    }, children: nodeStatus === "running" ? "Generating..." : "Generate ✦" }) })), outputUrl && (_jsx("div", { style: { padding: "8px 18px 12px" }, children: _jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }, children: [_jsx("span", { style: { fontSize: 11, fontWeight: 600, color: "#6b7280" }, children: def.category === "video" ? "Video" : def.category === "image" ? "Image" : "Output" }), _jsx("span", { style: { fontSize: 11, fontWeight: 500, color: "#9ca3af" }, children: values.model || "" })] }) })), outputUrl && (_jsx("div", { style: { padding: "0 18px 12px" }, children: (def.category === "video") ? (_jsx("video", { src: outputUrl, controls: true, autoPlay: true, loop: true, muted: true, style: { width: "100%", borderRadius: 12 } })) : (_jsx("img", { src: outputUrl, alt: "output", style: { width: "100%", borderRadius: 12, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" } })) })), nodeStatus && (_jsxs("div", { style: {
-                    padding: "8px 18px 12px",
-                    fontSize: 11,
-                    fontWeight: 500,
-                    color: nodeStatus === "running" ? "#92400e" : nodeStatus === "done" ? "#166534" : "#991b1b",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                }, children: [_jsx("span", { style: {
-                            width: 5, height: 5, borderRadius: "50%",
-                            background: nodeStatus === "running" ? "#f59e0b" : nodeStatus === "done" ? "#22c55e" : "#ef4444",
-                        } }), nodeStatus === "running" ? "Generating..." : nodeStatus === "done" ? "Complete" : nodeStatus] })), def.outputs.length > 0 && (_jsx(Handle, { type: "source", position: Position.Right, id: "out", style: {
-                    width: 10,
-                    height: 10,
-                    background: "#d1d5db",
-                    border: "2px solid #ffffff",
-                    right: -6,
-                    top: "50%",
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-                } }))] }));
+                    }, children: nodeStatus === "running" ? "Generating..." : "Generate ✦" }) })), nodeStatus && nodeStatus !== "done" && (_jsxs("div", { style: { padding: "8px 18px 12px", fontSize: 11, fontWeight: 500, color: nodeStatus === "running" ? "#92400e" : "#991b1b", display: "flex", alignItems: "center", gap: 6 }, children: [_jsx("span", { style: { width: 5, height: 5, borderRadius: "50%", background: nodeStatus === "running" ? "#f59e0b" : "#ef4444" } }), nodeStatus === "running" ? "Generating..." : nodeStatus] })), def.outputs.length > 0 && (_jsx(Handle, { type: "source", position: Position.Right, id: "out", style: { width: 10, height: 10, background: "#d1d5db", border: "2px solid #ffffff", right: -6, top: "50%", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" } }))] }));
 }
 const nodeTypes = { flowNode: FlowNode };
 // ---------------------------------------------------------------------------
@@ -445,7 +414,7 @@ export default function App() {
                 def,
                 values: defaults,
                 onChange: (key, val) => updateNodeValue(nodeId, key, val),
-                onRun: () => runSingleNodeRef.current(nodeId),
+                onRun: () => runSingleNodeRef.current(nodeId), onDelete: () => setNodes((nds) => nds.filter((n) => n.id !== nodeId)),
             },
         };
         setNodes((nds) => [...nds, newNode]);
@@ -534,7 +503,7 @@ export default function App() {
                 def,
                 values: defaults,
                 onChange: (key, val) => updateNodeValue(nodeId, key, val),
-                onRun: () => runSingleNodeRef.current(nodeId),
+                onRun: () => runSingleNodeRef.current(nodeId), onDelete: () => setNodes((nds) => nds.filter((n) => n.id !== nodeId)),
             },
         };
         setNodes((nds) => [...nds, newNode]);

@@ -79,7 +79,7 @@ const NODE_DEFS: NodeDef[] = [
     inputs: [
       { name: "prompt", type: "string", description: "Text prompt", required: true },
       { name: "negative_prompt", type: "string", description: "Negative prompt", default: "" },
-      { name: "model", type: "string", description: "Model", default: "flux-pro", options: ["flux-pro", "flux-dev", "sd-3.5", "dall-e-3", "ideogram-v3", "recraft-v3"] },
+      { name: "model", type: "string", description: "Model", default: "flux-pro", options: ["flux-2-pro", "flux-2-dev-lora", "flux-2-flex", "flux-pro-1.1-ultra", "flux-pro-1.1", "flux-fast", "sd-3.5", "dall-e-3", "gpt-image-1.5", "imagen-4", "imagen-3", "imagen-3-fast", "ideogram-v3", "recraft-v3", "reve", "higgsfield-image"] },
       { name: "width", type: "integer", description: "Width", default: 1024, options: ["512", "768", "1024", "1280", "1536"] },
       { name: "height", type: "integer", description: "Height", default: 1024, options: ["512", "768", "1024", "1280", "1536"] },
       { name: "guidance_scale", type: "float", description: "Guidance Scale", default: 7.5 },
@@ -101,7 +101,7 @@ const NODE_DEFS: NodeDef[] = [
     inputs: [
       { name: "prompt", type: "string", description: "Text prompt", required: true },
       { name: "negative_prompt", type: "string", description: "Negative prompt", default: "" },
-      { name: "model", type: "string", description: "Model", default: "wan-2.6", options: ["wan-2.6", "kling-2.6", "runway-gen4", "minimax-hailuo", "hunyuan", "veo-3"] },
+      { name: "model", type: "string", description: "Model", default: "wan-2.6", options: ["wan-2.1", "wan-2.1-1.3b", "kling-2.0", "kling-1.6-pro", "runway-gen4", "minimax-hailuo", "minimax-hailuo-i2v", "hunyuan", "luma-ray-2", "ltx-video-0.9.7", "veo-2", "cogvideox-5b", "mochi-v1"] },
       { name: "duration", type: "integer", description: "Duration (sec)", default: 4, options: ["2", "4", "6", "8", "10"] },
       { name: "fps", type: "integer", description: "FPS", default: 24, options: ["12", "24", "30"] },
       { name: "width", type: "integer", description: "Width", default: 1280, options: ["512", "768", "1024", "1280"] },
@@ -247,12 +247,37 @@ const stopKeys = (e: React.KeyboardEvent) => e.stopPropagation();
 // ---------------------------------------------------------------------------
 
 const FAL_MODELS: Record<string, string> = {
+  "flux-2-pro": "fal-ai/flux-pro/v1.1",
+  "flux-2-dev-lora": "fal-ai/flux-lora",
+  "flux-2-flex": "fal-ai/flux/dev",
+  "flux-pro-1.1-ultra": "fal-ai/flux-pro/v1.1-ultra",
+  "flux-pro-1.1": "fal-ai/flux-pro/v1.1",
+  "flux-fast": "fal-ai/flux/schnell",
   "flux-pro": "fal-ai/flux-pro/v1.1",
   "flux-dev": "fal-ai/flux/dev",
   "sd-3.5": "fal-ai/stable-diffusion-v35-large",
   "dall-e-3": "fal-ai/dall-e-3",
-  "wan-2.6": "fal-ai/wan/v2.1/1.3b",
-  "minimax-hailuo": "fal-ai/minimax-video/image-to-video",
+  "gpt-image-1.5": "fal-ai/gpt-image-1",
+  "imagen-4": "fal-ai/imagen4/preview",
+  "imagen-3": "fal-ai/imagen3",
+  "imagen-3-fast": "fal-ai/imagen3/fast",
+  "ideogram-v3": "fal-ai/ideogram/v3",
+  "recraft-v3": "fal-ai/recraft-v3",
+  "reve": "fal-ai/reve",
+  "higgsfield-image": "fal-ai/higgsfield",
+  "wan-2.1": "fal-ai/wan/v2.1",
+  "wan-2.1-1.3b": "fal-ai/wan/v2.1/1.3b",
+  "kling-2.0": "fal-ai/kling-video/v2/master",
+  "kling-1.6-pro": "fal-ai/kling-video/v1.6/pro",
+  "runway-gen4": "fal-ai/runway-gen3/turbo",
+  "minimax-hailuo": "fal-ai/minimax-video/video-01-live",
+  "minimax-hailuo-i2v": "fal-ai/minimax-video/image-to-video",
+  "hunyuan": "fal-ai/hunyuan-video",
+  "luma-ray-2": "fal-ai/luma-dream-machine",
+  "ltx-video-0.9.7": "fal-ai/ltx-video",
+  "veo-2": "fal-ai/veo2",
+  "cogvideox-5b": "fal-ai/cogvideox-5b",
+  "mochi-v1": "fal-ai/mochi-v1",
   "real-esrgan": "fal-ai/real-esrgan",
 };
 
@@ -551,13 +576,14 @@ export default function App() {
   );
 
   const addNodeWithHandler = useCallback(
-    (def: NodeDef) => {
+    (def: NodeDef, overrides?: Record<string, unknown>) => {
       idCounter.current += 1;
       const nodeId = `${def.id}_${idCounter.current}`;
       const defaults: Record<string, unknown> = {};
       def.inputs.forEach((inp) => {
         if (inp.default !== undefined) defaults[inp.name] = inp.default;
       });
+      if (overrides) Object.assign(defaults, overrides);
 
       const newNode: Node = {
         id: nodeId,
@@ -795,28 +821,66 @@ export default function App() {
               <div style={{ padding: "0 16px 10px", fontSize: 13, fontWeight: 600, color: "#1a1a1a" }}>
                 {CATEGORIES[activePanel] || activePanel}
               </div>
-              {(grouped[activePanel] || []).map((def) => (
-                <div
-                  key={def.id}
-                  draggable
-                  onDragStart={(e) => onDragStart(e, def)}
-                  onClick={() => { addNodeWithHandler(def); setActivePanel(null); }}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    padding: "8px 16px",
-                    cursor: "grab",
-                    borderRadius: 0,
-                    transition: "background 0.12s",
-                  }}
-                  onMouseOver={(e) => { e.currentTarget.style.background = "#f5f5f7"; }}
-                  onMouseOut={(e) => { e.currentTarget.style.background = "transparent"; }}
-                >
-                  <span style={{ color: "#6b7280", display: "flex" }} dangerouslySetInnerHTML={{ __html: NODE_ICONS[def.id] || "" }} />
-                  <div style={{ fontSize: 13, fontWeight: 500, color: "#1a1a1a" }}>{def.name}</div>
-                </div>
-              ))}
+              {(grouped[activePanel] || []).map((def) => {
+                const modelInput = def.inputs.find((inp) => inp.name === "model");
+                const models = modelInput?.options || [];
+                return (
+                  <div key={def.id}>
+                    {/* Node type header */}
+                    <div
+                      draggable
+                      onDragStart={(e) => onDragStart(e, def)}
+                      onClick={() => { addNodeWithHandler(def); setActivePanel(null); }}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        padding: "8px 16px",
+                        cursor: "grab",
+                        transition: "background 0.12s",
+                      }}
+                      onMouseOver={(e) => { e.currentTarget.style.background = "#f5f5f7"; }}
+                      onMouseOut={(e) => { e.currentTarget.style.background = "transparent"; }}
+                    >
+                      <span style={{ color: "#6b7280", display: "flex" }} dangerouslySetInnerHTML={{ __html: NODE_ICONS[def.id] || "" }} />
+                      <div style={{ fontSize: 13, fontWeight: 500, color: "#1a1a1a" }}>{def.name}</div>
+                    </div>
+                    {/* Model grid */}
+                    {models.length > 0 && (
+                      <div style={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 1fr",
+                        gap: 6,
+                        padding: "4px 12px 12px",
+                      }}>
+                        {models.map((m) => (
+                          <button
+                            key={m}
+                            onClick={() => { addNodeWithHandler(def, { model: m }); setActivePanel(null); }}
+                            style={{
+                              background: "#f5f5f7",
+                              border: "1px solid #ebebee",
+                              borderRadius: 8,
+                              padding: "8px 6px",
+                              cursor: "pointer",
+                              fontSize: 10,
+                              fontWeight: 500,
+                              color: "#1a1a1a",
+                              textAlign: "center",
+                              transition: "all 0.12s",
+                              lineHeight: 1.3,
+                            }}
+                            onMouseOver={(e) => { e.currentTarget.style.background = "#e8e8eb"; e.currentTarget.style.borderColor = "#d1d5db"; }}
+                            onMouseOut={(e) => { e.currentTarget.style.background = "#f5f5f7"; e.currentTarget.style.borderColor = "#ebebee"; }}
+                          >
+                            {m}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </aside>

@@ -38,7 +38,7 @@ const NODE_DEFS = [
         inputs: [
             { name: "prompt", type: "string", description: "Text prompt", required: true },
             { name: "negative_prompt", type: "string", description: "Negative prompt", default: "" },
-            { name: "model", type: "string", description: "Model", default: "flux-pro", options: ["flux-pro", "flux-dev", "sd-3.5", "dall-e-3", "ideogram-v3", "recraft-v3"] },
+            { name: "model", type: "string", description: "Model", default: "flux-pro", options: ["flux-2-pro", "flux-2-dev-lora", "flux-2-flex", "flux-pro-1.1-ultra", "flux-pro-1.1", "flux-fast", "sd-3.5", "dall-e-3", "gpt-image-1.5", "imagen-4", "imagen-3", "imagen-3-fast", "ideogram-v3", "recraft-v3", "reve", "higgsfield-image"] },
             { name: "width", type: "integer", description: "Width", default: 1024, options: ["512", "768", "1024", "1280", "1536"] },
             { name: "height", type: "integer", description: "Height", default: 1024, options: ["512", "768", "1024", "1280", "1536"] },
             { name: "guidance_scale", type: "float", description: "Guidance Scale", default: 7.5 },
@@ -60,7 +60,7 @@ const NODE_DEFS = [
         inputs: [
             { name: "prompt", type: "string", description: "Text prompt", required: true },
             { name: "negative_prompt", type: "string", description: "Negative prompt", default: "" },
-            { name: "model", type: "string", description: "Model", default: "wan-2.6", options: ["wan-2.6", "kling-2.6", "runway-gen4", "minimax-hailuo", "hunyuan", "veo-3"] },
+            { name: "model", type: "string", description: "Model", default: "wan-2.6", options: ["wan-2.1", "wan-2.1-1.3b", "kling-2.0", "kling-1.6-pro", "runway-gen4", "minimax-hailuo", "minimax-hailuo-i2v", "hunyuan", "luma-ray-2", "ltx-video-0.9.7", "veo-2", "cogvideox-5b", "mochi-v1"] },
             { name: "duration", type: "integer", description: "Duration (sec)", default: 4, options: ["2", "4", "6", "8", "10"] },
             { name: "fps", type: "integer", description: "FPS", default: 24, options: ["12", "24", "30"] },
             { name: "width", type: "integer", description: "Width", default: 1280, options: ["512", "768", "1024", "1280"] },
@@ -200,12 +200,37 @@ const stopKeys = (e) => e.stopPropagation();
 // fal.ai integration for real generation
 // ---------------------------------------------------------------------------
 const FAL_MODELS = {
+    "flux-2-pro": "fal-ai/flux-pro/v1.1",
+    "flux-2-dev-lora": "fal-ai/flux-lora",
+    "flux-2-flex": "fal-ai/flux/dev",
+    "flux-pro-1.1-ultra": "fal-ai/flux-pro/v1.1-ultra",
+    "flux-pro-1.1": "fal-ai/flux-pro/v1.1",
+    "flux-fast": "fal-ai/flux/schnell",
     "flux-pro": "fal-ai/flux-pro/v1.1",
     "flux-dev": "fal-ai/flux/dev",
     "sd-3.5": "fal-ai/stable-diffusion-v35-large",
     "dall-e-3": "fal-ai/dall-e-3",
-    "wan-2.6": "fal-ai/wan/v2.1/1.3b",
-    "minimax-hailuo": "fal-ai/minimax-video/image-to-video",
+    "gpt-image-1.5": "fal-ai/gpt-image-1",
+    "imagen-4": "fal-ai/imagen4/preview",
+    "imagen-3": "fal-ai/imagen3",
+    "imagen-3-fast": "fal-ai/imagen3/fast",
+    "ideogram-v3": "fal-ai/ideogram/v3",
+    "recraft-v3": "fal-ai/recraft-v3",
+    "reve": "fal-ai/reve",
+    "higgsfield-image": "fal-ai/higgsfield",
+    "wan-2.1": "fal-ai/wan/v2.1",
+    "wan-2.1-1.3b": "fal-ai/wan/v2.1/1.3b",
+    "kling-2.0": "fal-ai/kling-video/v2/master",
+    "kling-1.6-pro": "fal-ai/kling-video/v1.6/pro",
+    "runway-gen4": "fal-ai/runway-gen3/turbo",
+    "minimax-hailuo": "fal-ai/minimax-video/video-01-live",
+    "minimax-hailuo-i2v": "fal-ai/minimax-video/image-to-video",
+    "hunyuan": "fal-ai/hunyuan-video",
+    "luma-ray-2": "fal-ai/luma-dream-machine",
+    "ltx-video-0.9.7": "fal-ai/ltx-video",
+    "veo-2": "fal-ai/veo2",
+    "cogvideox-5b": "fal-ai/cogvideox-5b",
+    "mochi-v1": "fal-ai/mochi-v1",
     "real-esrgan": "fal-ai/real-esrgan",
 };
 async function runFalGeneration(modelKey, inputs, apiKey) {
@@ -373,7 +398,7 @@ export default function App() {
             };
         }));
     }, [setNodes]);
-    const addNodeWithHandler = useCallback((def) => {
+    const addNodeWithHandler = useCallback((def, overrides) => {
         idCounter.current += 1;
         const nodeId = `${def.id}_${idCounter.current}`;
         const defaults = {};
@@ -381,6 +406,8 @@ export default function App() {
             if (inp.default !== undefined)
                 defaults[inp.name] = inp.default;
         });
+        if (overrides)
+            Object.assign(defaults, overrides);
         const newNode = {
             id: nodeId,
             type: "flowNode",
@@ -470,8 +497,7 @@ export default function App() {
     const categories = Object.keys(grouped);
     return (_jsxs("div", { style: { display: "flex", height: "100vh", background: "#f0f0f2", color: "#1a1a1a", fontFamily: "'SF Pro Display', 'Inter', -apple-system, 'Helvetica Neue', sans-serif" }, children: [_jsxs("nav", { style: {
                     width: 56,
-                    background: "#ffffff",
-                    borderRight: "1px solid #ebebee",
+                    background: "#0e0e10",
                     display: "flex",
                     flexDirection: "column",
                     alignItems: "center",
@@ -480,35 +506,35 @@ export default function App() {
                     flexShrink: 0,
                     zIndex: 20,
                 }, children: [_jsx("div", { style: {
-                            width: 34, height: 34, borderRadius: 10,
-                            background: "#1a1a1a", color: "#fff",
+                            width: 36, height: 36, borderRadius: "50%",
+                            background: "#c8f542",
                             display: "flex", alignItems: "center", justifyContent: "center",
-                            fontSize: 14, fontWeight: 800, marginBottom: 20, letterSpacing: "-0.5px",
-                            cursor: "pointer",
+                            fontSize: 13, fontWeight: 800, color: "#0e0e10", marginBottom: 24,
+                            cursor: "pointer", letterSpacing: "-0.5px",
                         }, title: "OpenFlow", onClick: () => setActivePanel(null), children: "OF" }), categories.map((cat) => (_jsx("button", { title: CATEGORIES[cat] || cat, onClick: () => setActivePanel(activePanel === cat ? null : cat), style: {
                             width: 38, height: 38, borderRadius: 10,
                             border: "none",
-                            background: activePanel === cat ? "#f0f0f2" : "transparent",
-                            color: activePanel === cat ? "#1a1a1a" : "#9ca3af",
+                            background: activePanel === cat ? "#1e1e22" : "transparent",
+                            color: activePanel === cat ? "#c8f542" : "#6b6b75",
                             cursor: "pointer",
                             display: "flex", alignItems: "center", justifyContent: "center",
                             marginBottom: 4,
                             transition: "all 0.15s",
                         }, onMouseOver: (e) => { if (activePanel !== cat)
-                            e.currentTarget.style.color = "#6b7280"; }, onMouseOut: (e) => { if (activePanel !== cat)
-                            e.currentTarget.style.color = "#9ca3af"; }, dangerouslySetInnerHTML: { __html: SVG_ICONS[cat] || "" } }, cat))), _jsx("div", { style: { flex: 1 } }), _jsx("button", { title: "Settings", onClick: () => setActivePanel(activePanel === "settings" ? null : "settings"), style: {
+                            e.currentTarget.style.color = "#9ca3af"; }, onMouseOut: (e) => { if (activePanel !== cat)
+                            e.currentTarget.style.color = "#6b6b75"; }, dangerouslySetInnerHTML: { __html: SVG_ICONS[cat] || "" } }, cat))), _jsx("div", { style: { flex: 1 } }), _jsx("button", { title: "Settings", onClick: () => setActivePanel(activePanel === "settings" ? null : "settings"), style: {
                             width: 38, height: 38, borderRadius: 10,
                             border: "none",
-                            background: activePanel === "settings" ? "#f0f0f2" : "transparent",
-                            color: activePanel === "settings" ? "#1a1a1a" : "#9ca3af",
+                            background: activePanel === "settings" ? "#1e1e22" : "transparent",
+                            color: activePanel === "settings" ? "#c8f542" : "#6b6b75",
                             cursor: "pointer",
                             display: "flex", alignItems: "center", justifyContent: "center",
                             marginBottom: 4,
                         }, dangerouslySetInnerHTML: { __html: SVG_ICONS.settings } }), _jsx("button", { title: "Run workflow", onClick: handleRun, disabled: isRunning || nodes.length === 0, style: {
                             width: 38, height: 38, borderRadius: 10,
                             border: "none",
-                            background: isRunning ? "#e5e7eb" : "#1a1a1a",
-                            color: "#ffffff",
+                            background: isRunning ? "#2a2a30" : "#c8f542",
+                            color: isRunning ? "#6b6b75" : "#0e0e10",
                             cursor: isRunning ? "not-allowed" : "pointer",
                             display: "flex", alignItems: "center", justifyContent: "center",
                         }, dangerouslySetInnerHTML: { __html: SVG_ICONS.run } })] }), activePanel && (_jsx("aside", { style: {
@@ -529,15 +555,35 @@ export default function App() {
                                 padding: "8px 12px",
                                 outline: "none",
                                 boxSizing: "border-box",
-                            } }), _jsxs("div", { style: { fontSize: 10, color: "#9ca3af", marginTop: 6 }, children: ["Free at ", _jsx("a", { href: "https://fal.ai/dashboard/keys", target: "_blank", rel: "noopener", style: { color: "#1a1a1a", fontWeight: 600, textDecoration: "none" }, children: "fal.ai" })] }), _jsxs("div", { style: { fontSize: 10, color: "#c4c4c8", marginTop: 20 }, children: [nodes.length, " nodes \u00B7 ", edges.length, " connections"] })] })) : (_jsxs("div", { style: { padding: "16px 0" }, children: [_jsx("div", { style: { padding: "0 16px 10px", fontSize: 13, fontWeight: 600, color: "#1a1a1a" }, children: CATEGORIES[activePanel] || activePanel }), (grouped[activePanel] || []).map((def) => (_jsxs("div", { draggable: true, onDragStart: (e) => onDragStart(e, def), onClick: () => { addNodeWithHandler(def); setActivePanel(null); }, style: {
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 10,
-                                padding: "8px 16px",
-                                cursor: "grab",
-                                borderRadius: 0,
-                                transition: "background 0.12s",
-                            }, onMouseOver: (e) => { e.currentTarget.style.background = "#f5f5f7"; }, onMouseOut: (e) => { e.currentTarget.style.background = "transparent"; }, children: [_jsx("span", { style: { color: "#6b7280", display: "flex" }, dangerouslySetInnerHTML: { __html: NODE_ICONS[def.id] || "" } }), _jsx("div", { style: { fontSize: 13, fontWeight: 500, color: "#1a1a1a" }, children: def.name })] }, def.id)))] })) })), _jsx("div", { style: { flex: 1 }, onDrop: onDrop, onDragOver: onDragOver, children: _jsxs(ReactFlow, { nodes: nodes, edges: edges, onNodesChange: onNodesChange, onEdgesChange: onEdgesChange, onConnect: onConnect, nodeTypes: nodeTypes, fitView: true, style: { background: "#f0f0f2" }, defaultEdgeOptions: {
+                            } }), _jsxs("div", { style: { fontSize: 10, color: "#9ca3af", marginTop: 6 }, children: ["Free at ", _jsx("a", { href: "https://fal.ai/dashboard/keys", target: "_blank", rel: "noopener", style: { color: "#1a1a1a", fontWeight: 600, textDecoration: "none" }, children: "fal.ai" })] }), _jsxs("div", { style: { fontSize: 10, color: "#c4c4c8", marginTop: 20 }, children: [nodes.length, " nodes \u00B7 ", edges.length, " connections"] })] })) : (_jsxs("div", { style: { padding: "16px 0" }, children: [_jsx("div", { style: { padding: "0 16px 10px", fontSize: 13, fontWeight: 600, color: "#1a1a1a" }, children: CATEGORIES[activePanel] || activePanel }), (grouped[activePanel] || []).map((def) => {
+                            const modelInput = def.inputs.find((inp) => inp.name === "model");
+                            const models = modelInput?.options || [];
+                            return (_jsxs("div", { children: [_jsxs("div", { draggable: true, onDragStart: (e) => onDragStart(e, def), onClick: () => { addNodeWithHandler(def); setActivePanel(null); }, style: {
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: 10,
+                                            padding: "8px 16px",
+                                            cursor: "grab",
+                                            transition: "background 0.12s",
+                                        }, onMouseOver: (e) => { e.currentTarget.style.background = "#f5f5f7"; }, onMouseOut: (e) => { e.currentTarget.style.background = "transparent"; }, children: [_jsx("span", { style: { color: "#6b7280", display: "flex" }, dangerouslySetInnerHTML: { __html: NODE_ICONS[def.id] || "" } }), _jsx("div", { style: { fontSize: 13, fontWeight: 500, color: "#1a1a1a" }, children: def.name })] }), models.length > 0 && (_jsx("div", { style: {
+                                            display: "grid",
+                                            gridTemplateColumns: "1fr 1fr",
+                                            gap: 6,
+                                            padding: "4px 12px 12px",
+                                        }, children: models.map((m) => (_jsx("button", { onClick: () => { addNodeWithHandler(def, { model: m }); setActivePanel(null); }, style: {
+                                                background: "#f5f5f7",
+                                                border: "1px solid #ebebee",
+                                                borderRadius: 8,
+                                                padding: "8px 6px",
+                                                cursor: "pointer",
+                                                fontSize: 10,
+                                                fontWeight: 500,
+                                                color: "#1a1a1a",
+                                                textAlign: "center",
+                                                transition: "all 0.12s",
+                                                lineHeight: 1.3,
+                                            }, onMouseOver: (e) => { e.currentTarget.style.background = "#e8e8eb"; e.currentTarget.style.borderColor = "#d1d5db"; }, onMouseOut: (e) => { e.currentTarget.style.background = "#f5f5f7"; e.currentTarget.style.borderColor = "#ebebee"; }, children: m }, m))) }))] }, def.id));
+                        })] })) })), _jsx("div", { style: { flex: 1 }, onDrop: onDrop, onDragOver: onDragOver, children: _jsxs(ReactFlow, { nodes: nodes, edges: edges, onNodesChange: onNodesChange, onEdgesChange: onEdgesChange, onConnect: onConnect, nodeTypes: nodeTypes, fitView: true, style: { background: "#f0f0f2" }, defaultEdgeOptions: {
                         animated: false,
                         style: { stroke: "#d1d5db", strokeWidth: 1.5 },
                         type: "smoothstep",

@@ -1,0 +1,49 @@
+version: "3.8"
+
+services:
+  # PostgreSQL — workflow storage, user data
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: openflow
+      POSTGRES_USER: openflow
+      POSTGRES_PASSWORD: openflow_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  # Redis — task queue, caching, WebSocket pubsub
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  # Backend API
+  backend:
+    build: ./server
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://openflow:openflow_dev@postgres:5432/openflow
+      REDIS_URL: redis://redis:6379
+      DATA_DIR: /data/generations
+    volumes:
+      - generation_data:/data/generations
+    depends_on:
+      - postgres
+      - redis
+
+  # Frontend (dev mode)
+  frontend:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
+  generation_data:

@@ -1,5 +1,5 @@
 /**
- * OpenFlow — Visual AI Workflow Builder
+ * OpenClaw — Visual AI Workflow Builder
  *
  * Fully interactive node canvas with:
  * - Custom node components with real input fields
@@ -578,8 +578,8 @@ function LandingPage({ onEnter }: { onEnter: () => void }) {
               width: 32, height: 32, borderRadius: "50%",
               background: "#c026d3", display: "flex", alignItems: "center",
               justifyContent: "center", fontSize: 12, fontWeight: 800, color: "#fff",
-            }}>OF</div>
-            <span style={{ fontSize: 16, fontWeight: 700, letterSpacing: "-0.5px" }}>OpenFlow</span>
+            }}>OC</div>
+            <span style={{ fontSize: 16, fontWeight: 700, letterSpacing: "-0.5px" }}>OpenClaw</span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
             <a href="https://github.com/nikolateslasagent/openflow" target="_blank" rel="noopener"
@@ -689,7 +689,7 @@ function LandingPage({ onEnter }: { onEnter: () => void }) {
                 background: "#c026d3", display: "flex", alignItems: "center",
                 justifyContent: "center", fontSize: 18, fontWeight: 800,
                 margin: "0 auto 16px", color: "#fff",
-              }}>OF</div>
+              }}>OC</div>
               <div style={{ fontSize: 14, color: "#6b7280", fontWeight: 500 }}>
                 Your workspace awaits
               </div>
@@ -918,7 +918,7 @@ export default function App() {
           fontSize: 13, fontWeight: 800, color: "#0e0e10", marginBottom: 24,
           cursor: "pointer", letterSpacing: "-0.5px",
         }}
-          title="OpenFlow"
+          title="OpenClaw"
           onClick={() => setActivePanel(null)}
         >
           OF

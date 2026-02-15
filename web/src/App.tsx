@@ -798,10 +798,7 @@ export default function App() {
                   onMouseOut={(e) => { e.currentTarget.style.background = "transparent"; }}
                 >
                   <span style={{ color: "#6b7280", display: "flex" }} dangerouslySetInnerHTML={{ __html: NODE_ICONS[def.id] || "" }} />
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 500, color: "#1a1a1a" }}>{def.name}</div>
-                    <div style={{ fontSize: 10, color: "#9ca3af" }}>{def.description}</div>
-                  </div>
+                  <div style={{ fontSize: 13, fontWeight: 500, color: "#1a1a1a" }}>{def.name}</div>
                 </div>
               ))}
             </div>
@@ -826,7 +823,7 @@ export default function App() {
             type: "smoothstep",
           }}
         >
-          <Background variant={BackgroundVariant.Dots} color="#d4d4d8" gap={28} size={1} />
+          <Background variant={BackgroundVariant.Dots} color="#c0c0c6" gap={28} size={1.2} />
           <Controls
             style={{ background: "#ffffff", border: "1px solid #e8e8eb", borderRadius: 10, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}
           />

@@ -215,6 +215,54 @@ function groupByCategory(defs: NodeDef[]) {
 // Port type colors
 // ---------------------------------------------------------------------------
 
+/** Prevent React Flow from capturing keystrokes/clicks in input fields */
+const stopKeys = (e: React.KeyboardEvent) => e.stopPropagation();
+// ---------------------------------------------------------------------------
+// fal.ai integration for real generation
+// ---------------------------------------------------------------------------
+
+const FAL_MODELS: Record<string, string> = {
+  "flux-pro": "fal-ai/flux-pro/v1.1",
+  "flux-dev": "fal-ai/flux/dev",
+  "sd-3.5": "fal-ai/stable-diffusion-v35-large",
+  "dall-e-3": "fal-ai/dall-e-3",
+  "wan-2.6": "fal-ai/wan/v2.1/1.3b",
+  "minimax-hailuo": "fal-ai/minimax-video/image-to-video",
+  "real-esrgan": "fal-ai/real-esrgan",
+};
+
+async function runFalGeneration(
+  modelKey: string,
+  inputs: Record<string, unknown>,
+  apiKey: string,
+): Promise<{ url?: string; error?: string }> {
+  const falModel = FAL_MODELS[modelKey] || FAL_MODELS["flux-dev"];
+  try {
+    const body: Record<string, unknown> = { prompt: inputs.prompt || "" };
+    if (inputs.negative_prompt) body.negative_prompt = inputs.negative_prompt;
+    if (inputs.width) body.image_size = { width: Number(inputs.width), height: Number(inputs.height || inputs.width) };
+    if (inputs.guidance_scale) body.guidance_scale = Number(inputs.guidance_scale);
+    if (inputs.steps) body.num_inference_steps = Number(inputs.steps);
+    if (inputs.seed && Number(inputs.seed) >= 0) body.seed = Number(inputs.seed);
+
+    const resp = await fetch(`https://fal.run/${falModel}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Key ${apiKey}`,
+      },
+      body: JSON.stringify(body),
+    });
+    const data = await resp.json();
+    if (data.images?.[0]?.url) return { url: data.images[0].url };
+    if (data.image?.url) return { url: data.image.url };
+    if (data.video?.url) return { url: data.video.url };
+    return { error: data.detail || JSON.stringify(data).slice(0, 200) };
+  } catch (err: unknown) {
+    return { error: String(err) };
+  }
+}
+
 const PORT_COLORS: Record<string, string> = {
   string: "#6366f1",
   integer: "#22c55e",
@@ -235,6 +283,8 @@ function FlowNode({ data, selected }: NodeProps) {
   const def = data.def as NodeDef;
   const values = data.values as Record<string, unknown>;
   const onChange = data.onChange as (key: string, val: unknown) => void;
+  const outputUrl = data.outputUrl as string | undefined;
+  const nodeStatus = data.status as string | undefined;
 
   return (
     <div
@@ -269,7 +319,7 @@ function FlowNode({ data, selected }: NodeProps) {
       </div>
 
       {/* Input handles + fields */}
-      <div style={{ padding: "8px 0" }}>
+      <div className="nodrag nowheel" style={{ padding: "8px 0" }}>
         {def.inputs.map((inp) => (
           <div key={inp.name} style={{ position: "relative", padding: "4px 14px" }}>
             <Handle
@@ -290,7 +340,7 @@ function FlowNode({ data, selected }: NodeProps) {
             </div>
             {inp.type === "string" && !inp.options && (
               inp.name === "prompt" || inp.name === "system" ? (
-                <textarea
+                <textarea onKeyDown={stopKeys}
                   value={(values[inp.name] as string) || ""}
                   onChange={(e) => onChange(inp.name, e.target.value)}
                   placeholder={inp.description}
@@ -309,7 +359,7 @@ function FlowNode({ data, selected }: NodeProps) {
                   }}
                 />
               ) : (
-                <input
+                <input onKeyDown={stopKeys}
                   type="text"
                   value={(values[inp.name] as string) || ""}
                   onChange={(e) => onChange(inp.name, e.target.value)}
@@ -328,7 +378,7 @@ function FlowNode({ data, selected }: NodeProps) {
               )
             )}
             {inp.options && (
-              <select
+              <select onKeyDown={stopKeys}
                 value={String(values[inp.name] ?? inp.default ?? "")}
                 onChange={(e) => onChange(inp.name, e.target.value)}
                 style={{
@@ -349,7 +399,7 @@ function FlowNode({ data, selected }: NodeProps) {
               </select>
             )}
             {(inp.type === "integer" || inp.type === "float") && !inp.options && (
-              <input
+              <input onKeyDown={stopKeys}
                 type="number"
                 value={String(values[inp.name] ?? inp.default ?? "")}
                 onChange={(e) => onChange(inp.name, inp.type === "float" ? parseFloat(e.target.value) : parseInt(e.target.value))}
@@ -369,6 +419,37 @@ function FlowNode({ data, selected }: NodeProps) {
           </div>
         ))}
       </div>
+
+      {/* Output preview */}
+      {outputUrl && (
+        <div style={{ padding: "8px 14px", borderTop: "1px solid #2f2f3f" }}>
+          {(def.category === "video") ? (
+            <video src={outputUrl} controls autoPlay loop muted style={{ width: "100%", borderRadius: 6 }} />
+          ) : (
+            <img src={outputUrl} alt="output" style={{ width: "100%", borderRadius: 6 }} />
+          )}
+        </div>
+      )}
+
+      {/* Status indicator */}
+      {nodeStatus && (
+        <div style={{
+          padding: "6px 14px",
+          borderTop: "1px solid #2f2f3f",
+          fontSize: 11,
+          color: nodeStatus === "running" ? "#f59e0b" : nodeStatus === "done" ? "#22c55e" : "#ef4444",
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+        }}>
+          <span style={{
+            width: 6, height: 6, borderRadius: "50%",
+            background: nodeStatus === "running" ? "#f59e0b" : nodeStatus === "done" ? "#22c55e" : "#ef4444",
+            animation: nodeStatus === "running" ? "pulse 1s infinite" : "none",
+          }} />
+          {nodeStatus === "running" ? "Generating..." : nodeStatus === "done" ? "Complete" : nodeStatus}
+        </div>
+      )}
 
       {/* Output handles */}
       {def.outputs.length > 0 && (
@@ -407,7 +488,7 @@ export default function App() {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [isRunning, setIsRunning] = useState(false);
-  const [_runStatus, setRunStatus] = useState<Record<string, string>>({});
+  const [falApiKey, setFalApiKey] = useState(() => localStorage.getItem("openflow_fal_key") || "");
   const idCounter = useRef(0);
 
   const grouped = useMemo(() => groupByCategory(NODE_DEFS), []);
@@ -474,27 +555,44 @@ export default function App() {
     [setNodes, updateNodeValue]
   );
 
-  const handleRun = useCallback(() => {
+  const setNodeData = useCallback((nodeId: string, patch: Record<string, unknown>) => {
+    setNodes((nds) => nds.map((n) => {
+      if (n.id !== nodeId) return n;
+      return { ...n, data: { ...n.data, ...patch } };
+    }));
+  }, [setNodes]);
+
+  const handleRun = useCallback(async () => {
+    if (!falApiKey) {
+      alert("Enter your fal.ai API key in the sidebar first!");
+      return;
+    }
+    localStorage.setItem("openflow_fal_key", falApiKey);
     setIsRunning(true);
-    // Simulate execution
-    const nodeIds = nodes.map((n) => n.id);
-    let i = 0;
-    const interval = setInterval(() => {
-      if (i < nodeIds.length) {
-        setRunStatus((prev) => ({ ...prev, [nodeIds[i]]: "running" }));
-        setTimeout(() => {
-          setRunStatus((prev) => ({ ...prev, [nodeIds[i - 1]]: "done" }));
-        }, 800);
-        i++;
+
+    // Find generation nodes (nodes with a model input)
+    const genNodes = nodes.filter((n) => {
+      const def = n.data.def as NodeDef;
+      return def.inputs.some((inp) => inp.name === "model");
+    });
+
+    for (const node of genNodes) {
+      const values = node.data.values as Record<string, unknown>;
+      const modelKey = (values.model as string) || "flux-dev";
+
+      setNodeData(node.id, { status: "running", outputUrl: undefined });
+
+      const result = await runFalGeneration(modelKey, values, falApiKey);
+
+      if (result.url) {
+        setNodeData(node.id, { status: "done", outputUrl: result.url });
       } else {
-        clearInterval(interval);
-        setTimeout(() => {
-          setIsRunning(false);
-          setRunStatus({});
-        }, 1000);
+        setNodeData(node.id, { status: `Error: ${result.error}` });
       }
-    }, 1000);
-  }, [nodes]);
+    }
+
+    setIsRunning(false);
+  }, [nodes, falApiKey, setNodeData]);
 
   // Drag from palette
   const onDragStart = (e: DragEvent, def: NodeDef) => {
@@ -637,8 +735,35 @@ export default function App() {
           ))}
         </div>
 
-        {/* Run button */}
+        {/* API Key + Run */}
         <div style={{ padding: 16, borderTop: "1px solid #2f2f35" }}>
+          <div style={{ marginBottom: 10 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "#adadb8", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 4 }}>
+              🔑 fal.ai API Key
+            </div>
+            <input
+              type="password"
+              value={falApiKey}
+              onChange={(e) => setFalApiKey(e.target.value)}
+              onKeyDown={stopKeys}
+              placeholder="fal-xxxxxxxx"
+              style={{
+                width: "100%",
+                background: "#0e0e18",
+                border: "1px solid #2f2f35",
+                borderRadius: 6,
+                color: "#efeff1",
+                fontSize: 11,
+                padding: "6px 8px",
+                outline: "none",
+              }}
+            />
+            <div style={{ fontSize: 9, color: "#64748b", marginTop: 3 }}>
+              Get one free at <a href="https://fal.ai/dashboard/keys" target="_blank" rel="noopener" style={{ color: "#6366f1" }}>fal.ai/dashboard/keys</a>
+            </div>
+          </div>
+        </div>
+        <div style={{ padding: "0 16px 16px" }}>
           <button
             onClick={handleRun}
             disabled={isRunning || nodes.length === 0}

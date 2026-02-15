@@ -1,4 +1,4 @@
-import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { jsxs as _jsxs, jsx as _jsx } from "react/jsx-runtime";
 /**
  * OpenFlow — Visual AI Workflow Builder
  *
@@ -10,7 +10,7 @@ import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
  * - Output preview panel
  */
 import { useCallback, useMemo, useState, useRef } from "react";
-import { ReactFlow, Background, Controls, MiniMap, Panel, addEdge, useNodesState, useEdgesState, Handle, Position, BackgroundVariant, } from "@xyflow/react";
+import { ReactFlow, Background, Controls, MiniMap, addEdge, useNodesState, useEdgesState, Handle, Position, BackgroundVariant, } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 // ---------------------------------------------------------------------------
 // Node definitions with real parameters
@@ -219,19 +219,8 @@ async function runFalGeneration(modelKey, inputs, apiKey) {
         return { error: String(err) };
     }
 }
-const PORT_COLORS = {
-    string: "#6366f1",
-    integer: "#22c55e",
-    float: "#f59e0b",
-    boolean: "#ef4444",
-    image: "#ec4899",
-    video: "#f97316",
-    audio: "#8b5cf6",
-    json: "#64748b",
-    any: "#94a3b8",
-};
 // ---------------------------------------------------------------------------
-// Custom Node Component
+// Custom Node Component — Clean white elegant design
 // ---------------------------------------------------------------------------
 function FlowNode({ data, selected }) {
     const def = data.def;
@@ -240,86 +229,91 @@ function FlowNode({ data, selected }) {
     const outputUrl = data.outputUrl;
     const nodeStatus = data.status;
     return (_jsxs("div", { style: {
-            background: "#1e1e2e",
-            border: `2px solid ${selected ? def.color : "#2f2f3f"}`,
-            borderRadius: 12,
-            minWidth: 240,
-            maxWidth: 320,
-            fontFamily: "'Inter', -apple-system, sans-serif",
-            boxShadow: selected ? `0 0 20px ${def.color}33` : "0 4px 12px rgba(0,0,0,0.4)",
-            transition: "border-color 0.2s, box-shadow 0.2s",
-        }, children: [_jsxs("div", { style: {
-                    padding: "10px 14px",
-                    background: `${def.color}18`,
-                    borderBottom: "1px solid #2f2f3f",
-                    borderRadius: "10px 10px 0 0",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                }, children: [_jsx("span", { style: { fontSize: 18 }, children: def.icon }), _jsxs("div", { children: [_jsx("div", { style: { fontSize: 13, fontWeight: 700, color: "#efeff1" }, children: def.name }), _jsx("div", { style: { fontSize: 10, color: "#adadb8" }, children: def.description })] })] }), _jsx("div", { className: "nodrag nowheel", style: { padding: "8px 0" }, children: def.inputs.map((inp) => (_jsxs("div", { style: { position: "relative", padding: "4px 14px" }, children: [_jsx(Handle, { type: "target", position: Position.Left, id: inp.name, style: {
-                                width: 10,
-                                height: 10,
-                                background: PORT_COLORS[inp.type] || "#94a3b8",
-                                border: "2px solid #1e1e2e",
-                                left: -6,
-                            } }), _jsxs("div", { style: { fontSize: 10, color: "#adadb8", marginBottom: 3, display: "flex", justifyContent: "space-between" }, children: [_jsx("span", { children: inp.description }), _jsx("span", { style: { color: PORT_COLORS[inp.type], fontSize: 9 }, children: inp.type })] }), inp.type === "string" && !inp.options && (inp.name === "prompt" || inp.name === "system" ? (_jsx("textarea", { onKeyDown: stopKeys, value: values[inp.name] || "", onChange: (e) => onChange(inp.name, e.target.value), placeholder: inp.description, rows: inp.name === "prompt" ? 3 : 2, style: {
+            background: "#ffffff",
+            border: selected ? "1.5px solid #d1d5db" : "1px solid #e8e8eb",
+            borderRadius: 16,
+            minWidth: 220,
+            maxWidth: 340,
+            fontFamily: "'Inter', -apple-system, 'Helvetica Neue', sans-serif",
+            boxShadow: selected
+                ? "0 8px 30px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04)"
+                : "0 2px 12px rgba(0,0,0,0.04), 0 1px 4px rgba(0,0,0,0.02)",
+            transition: "box-shadow 0.2s, border-color 0.2s",
+        }, children: [_jsx("div", { style: {
+                    padding: "14px 18px 10px",
+                }, children: _jsxs("div", { style: {
+                        fontSize: 11,
+                        fontWeight: 700,
+                        color: "#1a1a1a",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.8px",
+                    }, children: [def.icon, " ", def.name] }) }), _jsx("div", { className: "nodrag nowheel", style: { padding: "8px 0" }, children: def.inputs.map((inp) => (_jsxs("div", { style: { position: "relative", padding: "4px 14px" }, children: [_jsx(Handle, { type: "target", position: Position.Left, id: inp.name, style: {
+                                width: 9,
+                                height: 9,
+                                background: "#d1d5db",
+                                border: "2px solid #ffffff",
+                                left: -5,
+                                boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                            } }), inp.type === "string" && !inp.options && (inp.name === "prompt" || inp.name === "system" ? (_jsx("textarea", { onKeyDown: stopKeys, value: values[inp.name] || "", onChange: (e) => onChange(inp.name, e.target.value), placeholder: inp.description, rows: inp.name === "prompt" ? 3 : 2, style: {
                                 width: "100%",
-                                background: "#0e0e18",
-                                border: "1px solid #2f2f3f",
-                                borderRadius: 6,
-                                color: "#efeff1",
-                                fontSize: 12,
-                                padding: "6px 8px",
+                                background: "#f5f5f7",
+                                border: "none",
+                                borderRadius: 10,
+                                color: "#1a1a1a",
+                                fontSize: 14,
+                                padding: "10px 14px",
                                 resize: "vertical",
                                 outline: "none",
                                 fontFamily: "inherit",
+                                lineHeight: 1.5,
                             } })) : (_jsx("input", { onKeyDown: stopKeys, type: "text", value: values[inp.name] || "", onChange: (e) => onChange(inp.name, e.target.value), placeholder: inp.description, style: {
                                 width: "100%",
-                                background: "#0e0e18",
-                                border: "1px solid #2f2f3f",
-                                borderRadius: 6,
-                                color: "#efeff1",
-                                fontSize: 12,
-                                padding: "5px 8px",
+                                background: "#f5f5f7",
+                                border: "none",
+                                borderRadius: 10,
+                                color: "#1a1a1a",
+                                fontSize: 13,
+                                padding: "8px 14px",
                                 outline: "none",
                             } }))), inp.options && (_jsx("select", { onKeyDown: stopKeys, value: String(values[inp.name] ?? inp.default ?? ""), onChange: (e) => onChange(inp.name, e.target.value), style: {
                                 width: "100%",
-                                background: "#0e0e18",
-                                border: "1px solid #2f2f3f",
-                                borderRadius: 6,
-                                color: "#efeff1",
-                                fontSize: 12,
-                                padding: "5px 8px",
+                                background: "#f5f5f7",
+                                border: "none",
+                                borderRadius: 10,
+                                color: "#1a1a1a",
+                                fontSize: 13,
+                                padding: "8px 14px",
                                 outline: "none",
                                 cursor: "pointer",
+                                WebkitAppearance: "none",
                             }, children: inp.options.map((opt) => (_jsx("option", { value: opt, children: opt }, opt))) })), (inp.type === "integer" || inp.type === "float") && !inp.options && (_jsx("input", { onKeyDown: stopKeys, type: "number", value: String(values[inp.name] ?? inp.default ?? ""), onChange: (e) => onChange(inp.name, inp.type === "float" ? parseFloat(e.target.value) : parseInt(e.target.value)), step: inp.type === "float" ? 0.1 : 1, style: {
                                 width: "100%",
-                                background: "#0e0e18",
-                                border: "1px solid #2f2f3f",
-                                borderRadius: 6,
-                                color: "#efeff1",
-                                fontSize: 12,
-                                padding: "5px 8px",
+                                background: "#f5f5f7",
+                                border: "none",
+                                borderRadius: 10,
+                                color: "#1a1a1a",
+                                fontSize: 13,
+                                padding: "8px 14px",
                                 outline: "none",
-                            } }))] }, inp.name))) }), outputUrl && (_jsx("div", { style: { padding: "8px 14px", borderTop: "1px solid #2f2f3f" }, children: (def.category === "video") ? (_jsx("video", { src: outputUrl, controls: true, autoPlay: true, loop: true, muted: true, style: { width: "100%", borderRadius: 6 } })) : (_jsx("img", { src: outputUrl, alt: "output", style: { width: "100%", borderRadius: 6 } })) })), nodeStatus && (_jsxs("div", { style: {
-                    padding: "6px 14px",
-                    borderTop: "1px solid #2f2f3f",
+                            } }))] }, inp.name))) }), outputUrl && (_jsx("div", { style: { padding: "8px 18px 12px" }, children: (def.category === "video") ? (_jsx("video", { src: outputUrl, controls: true, autoPlay: true, loop: true, muted: true, style: { width: "100%", borderRadius: 12 } })) : (_jsx("img", { src: outputUrl, alt: "output", style: { width: "100%", borderRadius: 12, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" } })) })), nodeStatus && (_jsxs("div", { style: {
+                    padding: "8px 18px 12px",
                     fontSize: 11,
-                    color: nodeStatus === "running" ? "#f59e0b" : nodeStatus === "done" ? "#22c55e" : "#ef4444",
+                    fontWeight: 500,
+                    color: nodeStatus === "running" ? "#92400e" : nodeStatus === "done" ? "#166534" : "#991b1b",
                     display: "flex",
                     alignItems: "center",
                     gap: 6,
                 }, children: [_jsx("span", { style: {
-                            width: 6, height: 6, borderRadius: "50%",
+                            width: 5, height: 5, borderRadius: "50%",
                             background: nodeStatus === "running" ? "#f59e0b" : nodeStatus === "done" ? "#22c55e" : "#ef4444",
-                            animation: nodeStatus === "running" ? "pulse 1s infinite" : "none",
-                        } }), nodeStatus === "running" ? "Generating..." : nodeStatus === "done" ? "Complete" : nodeStatus] })), def.outputs.length > 0 && (_jsx("div", { style: { padding: "4px 0 8px", borderTop: "1px solid #2f2f3f" }, children: def.outputs.map((out) => (_jsxs("div", { style: { position: "relative", padding: "4px 14px", textAlign: "right" }, children: [_jsx(Handle, { type: "source", position: Position.Right, id: out.name, style: {
-                                width: 10,
-                                height: 10,
-                                background: PORT_COLORS[out.type] || "#94a3b8",
-                                border: "2px solid #1e1e2e",
-                                right: -6,
-                            } }), _jsx("span", { style: { fontSize: 10, color: "#adadb8" }, children: out.description }), _jsx("span", { style: { fontSize: 9, color: PORT_COLORS[out.type], marginLeft: 6 }, children: out.type })] }, out.name))) }))] }));
+                        } }), nodeStatus === "running" ? "Generating..." : nodeStatus === "done" ? "Complete" : nodeStatus] })), def.outputs.length > 0 && (_jsx("div", { style: { padding: "4px 0 12px" }, children: def.outputs.map((out) => (_jsx("div", { style: { position: "relative", padding: "2px 18px", textAlign: "right" }, children: _jsx(Handle, { type: "source", position: Position.Right, id: out.name, style: {
+                            width: 9,
+                            height: 9,
+                            background: "#d1d5db",
+                            border: "2px solid #ffffff",
+                            right: -5,
+                            boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                        } }) }, out.name))) }))] }));
 }
 const nodeTypes = { flowNode: FlowNode };
 // ---------------------------------------------------------------------------
@@ -446,87 +440,68 @@ export default function App() {
         e.preventDefault();
         e.dataTransfer.dropEffect = "move";
     }, []);
-    return (_jsxs("div", { style: { display: "flex", height: "100vh", background: "#0e0e10", color: "#efeff1" }, children: [_jsxs("aside", { style: {
-                    width: 260,
-                    background: "#18181b",
-                    borderRight: "1px solid #2f2f35",
+    return (_jsxs("div", { style: { display: "flex", height: "100vh", background: "#f0f0f2", color: "#1a1a1a" }, children: [_jsxs("aside", { style: {
+                    width: 250,
+                    background: "#ffffff",
+                    borderRight: "1px solid #e8e8eb",
                     overflowY: "auto",
                     flexShrink: 0,
                     display: "flex",
                     flexDirection: "column",
                 }, children: [_jsxs("div", { style: {
-                            padding: "14px 16px",
-                            borderBottom: "1px solid #2f2f35",
+                            padding: "18px 20px 14px",
+                            borderBottom: "1px solid #f0f0f2",
                             display: "flex",
                             alignItems: "center",
                             gap: 8,
-                        }, children: [_jsx("span", { style: { fontSize: 22 }, children: "\u26A1" }), _jsx("span", { style: { fontSize: 17, fontWeight: 800, letterSpacing: "-0.5px" }, children: "OpenFlow" }), _jsx("span", { style: { fontSize: 10, color: "#adadb8", marginLeft: "auto", background: "#2f2f35", padding: "2px 6px", borderRadius: 4 }, children: "v0.1" })] }), _jsx("div", { style: { flex: 1, overflowY: "auto" }, children: Object.entries(grouped).map(([category, defs]) => (_jsxs("div", { children: [_jsx("div", { style: {
-                                        padding: "12px 16px 6px",
-                                        fontSize: 11,
-                                        fontWeight: 700,
-                                        color: "#adadb8",
+                        }, children: [_jsx("span", { style: { fontSize: 18, fontWeight: 800, letterSpacing: "-0.5px", color: "#1a1a1a" }, children: "OpenFlow" }), _jsx("span", { style: { fontSize: 9, color: "#9ca3af", marginLeft: "auto", background: "#f5f5f7", padding: "2px 8px", borderRadius: 6, fontWeight: 600 }, children: "v0.1" })] }), _jsx("div", { style: { flex: 1, overflowY: "auto" }, children: Object.entries(grouped).map(([category, defs]) => (_jsxs("div", { children: [_jsx("div", { style: {
+                                        padding: "16px 20px 6px",
+                                        fontSize: 10,
+                                        fontWeight: 600,
+                                        color: "#9ca3af",
                                         textTransform: "uppercase",
-                                        letterSpacing: "0.5px",
+                                        letterSpacing: "0.8px",
                                     }, children: CATEGORIES[category] || category }), defs.map((def) => (_jsxs("div", { draggable: true, onDragStart: (e) => onDragStart(e, def), onClick: () => addNodeWithHandler(def), style: {
                                         display: "flex",
                                         alignItems: "center",
                                         gap: 10,
-                                        padding: "8px 16px",
+                                        padding: "7px 20px",
                                         cursor: "grab",
-                                        borderLeft: `3px solid transparent`,
-                                        transition: "all 0.15s",
+                                        borderRadius: 8,
+                                        margin: "1px 8px",
+                                        transition: "background 0.15s",
                                     }, onMouseOver: (e) => {
-                                        e.currentTarget.style.background = "#1f1f23";
-                                        e.currentTarget.style.borderLeftColor = def.color;
+                                        e.currentTarget.style.background = "#f5f5f7";
                                     }, onMouseOut: (e) => {
                                         e.currentTarget.style.background = "transparent";
-                                        e.currentTarget.style.borderLeftColor = "transparent";
-                                    }, children: [_jsx("span", { style: {
-                                                fontSize: 18,
-                                                width: 32,
-                                                height: 32,
-                                                display: "flex",
-                                                alignItems: "center",
-                                                justifyContent: "center",
-                                                background: `${def.color}22`,
-                                                borderRadius: 8,
-                                                flexShrink: 0,
-                                            }, children: def.icon }), _jsxs("div", { children: [_jsx("div", { style: { fontSize: 13, fontWeight: 600 }, children: def.name }), _jsx("div", { style: { fontSize: 10, color: "#adadb8" }, children: def.description })] })] }, def.id)))] }, category))) }), _jsx("div", { style: { padding: 16, borderTop: "1px solid #2f2f35" }, children: _jsxs("div", { style: { marginBottom: 10 }, children: [_jsx("div", { style: { fontSize: 10, fontWeight: 700, color: "#adadb8", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 4 }, children: "\uD83D\uDD11 fal.ai API Key" }), _jsx("input", { type: "password", value: falApiKey, onChange: (e) => setFalApiKey(e.target.value), onKeyDown: stopKeys, placeholder: "fal-xxxxxxxx", style: {
+                                    }, children: [_jsx("span", { style: { fontSize: 15 }, children: def.icon }), _jsxs("div", { children: [_jsx("div", { style: { fontSize: 12, fontWeight: 600, color: "#1a1a1a" }, children: def.name }), _jsx("div", { style: { fontSize: 10, color: "#9ca3af" }, children: def.description })] })] }, def.id)))] }, category))) }), _jsx("div", { style: { padding: "12px 16px", borderTop: "1px solid #f0f0f2" }, children: _jsxs("div", { style: { marginBottom: 12 }, children: [_jsx("div", { style: { fontSize: 9, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 4 }, children: "API Key" }), _jsx("input", { type: "password", value: falApiKey, onChange: (e) => setFalApiKey(e.target.value), onKeyDown: stopKeys, placeholder: "fal-xxxxxxxx", style: {
                                         width: "100%",
-                                        background: "#0e0e18",
-                                        border: "1px solid #2f2f35",
-                                        borderRadius: 6,
-                                        color: "#efeff1",
+                                        background: "#f5f5f7",
+                                        border: "none",
+                                        borderRadius: 8,
+                                        color: "#1a1a1a",
                                         fontSize: 11,
-                                        padding: "6px 8px",
+                                        padding: "8px 12px",
                                         outline: "none",
-                                    } }), _jsxs("div", { style: { fontSize: 9, color: "#64748b", marginTop: 3 }, children: ["Get one free at ", _jsx("a", { href: "https://fal.ai/dashboard/keys", target: "_blank", rel: "noopener", style: { color: "#6366f1" }, children: "fal.ai/dashboard/keys" })] })] }) }), _jsxs("div", { style: { padding: "0 16px 16px" }, children: [_jsx("button", { onClick: handleRun, disabled: isRunning || nodes.length === 0, style: {
+                                    } }), _jsxs("div", { style: { fontSize: 9, color: "#9ca3af", marginTop: 4 }, children: ["Free at ", _jsx("a", { href: "https://fal.ai/dashboard/keys", target: "_blank", rel: "noopener", style: { color: "#1a1a1a", fontWeight: 600, textDecoration: "none" }, children: "fal.ai" })] })] }) }), _jsxs("div", { style: { padding: "0 16px 16px" }, children: [_jsx("button", { onClick: handleRun, disabled: isRunning || nodes.length === 0, style: {
                                     width: "100%",
                                     padding: "10px",
-                                    background: isRunning ? "#2f2f35" : "#6366f1",
-                                    color: "#fff",
+                                    background: isRunning ? "#e5e7eb" : "#1a1a1a",
+                                    color: isRunning ? "#9ca3af" : "#ffffff",
                                     border: "none",
-                                    borderRadius: 8,
-                                    fontSize: 14,
-                                    fontWeight: 700,
+                                    borderRadius: 10,
+                                    fontSize: 13,
+                                    fontWeight: 600,
                                     cursor: isRunning ? "not-allowed" : "pointer",
                                     display: "flex",
                                     alignItems: "center",
                                     justifyContent: "center",
                                     gap: 8,
                                     transition: "background 0.2s",
-                                }, children: isRunning ? "⏳ Running..." : "▶ Run Workflow" }), _jsxs("div", { style: { fontSize: 10, color: "#adadb8", textAlign: "center", marginTop: 6 }, children: [nodes.length, " nodes \u00B7 ", edges.length, " connections"] })] })] }), _jsx("div", { style: { flex: 1 }, onDrop: onDrop, onDragOver: onDragOver, children: _jsxs(ReactFlow, { nodes: nodes, edges: edges, onNodesChange: onNodesChange, onEdgesChange: onEdgesChange, onConnect: onConnect, nodeTypes: nodeTypes, fitView: true, style: { background: "#0e0e10" }, defaultEdgeOptions: {
-                        animated: true,
-                        style: { stroke: "#6366f1", strokeWidth: 2 },
-                    }, children: [_jsx(Background, { variant: BackgroundVariant.Dots, color: "#2f2f35", gap: 24, size: 1 }), _jsx(Controls, { style: { background: "#18181b", borderColor: "#2f2f35", borderRadius: 8 } }), _jsx(MiniMap, { style: { background: "#18181b", borderRadius: 8 }, nodeColor: "#6366f1", maskColor: "rgba(0,0,0,0.7)" }), _jsx(Panel, { position: "top-right", children: _jsxs("div", { style: {
-                                    background: "#18181b",
-                                    border: "1px solid #2f2f35",
-                                    borderRadius: 8,
-                                    padding: "8px 14px",
-                                    fontSize: 12,
-                                    color: "#adadb8",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: 8,
-                                }, children: [_jsx("span", { style: { width: 8, height: 8, borderRadius: "50%", background: "#22c55e" } }), "Ready \u2014 Drag nodes from sidebar or click to add"] }) })] }) })] }));
+                                    letterSpacing: "-0.2px",
+                                }, children: isRunning ? "Generating..." : "Run" }), _jsxs("div", { style: { fontSize: 10, color: "#c4c4c8", textAlign: "center", marginTop: 8 }, children: [nodes.length, " nodes \u00B7 ", edges.length, " connections"] })] })] }), _jsx("div", { style: { flex: 1 }, onDrop: onDrop, onDragOver: onDragOver, children: _jsxs(ReactFlow, { nodes: nodes, edges: edges, onNodesChange: onNodesChange, onEdgesChange: onEdgesChange, onConnect: onConnect, nodeTypes: nodeTypes, fitView: true, style: { background: "#f0f0f2" }, defaultEdgeOptions: {
+                        animated: false,
+                        style: { stroke: "#d1d5db", strokeWidth: 1.5 },
+                        type: "smoothstep",
+                    }, children: [_jsx(Background, { variant: BackgroundVariant.Dots, color: "#d4d4d8", gap: 28, size: 1 }), _jsx(Controls, { style: { background: "#ffffff", border: "1px solid #e8e8eb", borderRadius: 10, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" } }), _jsx(MiniMap, { style: { background: "#ffffff", borderRadius: 10, border: "1px solid #e8e8eb", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }, nodeColor: "#d1d5db", maskColor: "rgba(240,240,242,0.8)" })] }) })] }));
 }

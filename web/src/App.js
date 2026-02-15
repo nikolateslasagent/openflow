@@ -395,7 +395,7 @@ function LandingPage({ onEnter }) {
                             width: "fit-content",
                         }, children: [_jsx("span", { style: {
                                     width: 8, height: 8, borderRadius: "50%",
-                                    background: "#ef4444", boxShadow: "0 0 0 3px rgba(239,68,68,0.2)",
+                                    background: "#22c55e", boxShadow: "0 0 0 3px rgba(34,197,94,0.2)",
                                 } }), _jsx("span", { style: { fontSize: 12, fontWeight: 600, color: "#e5e7eb", letterSpacing: "0.3px" }, children: "NO SUBSCRIPTIONS & NO MARKUP!" })] }), _jsxs("h1", { style: {
                             fontSize: 52, fontWeight: 800, lineHeight: 1.1,
                             letterSpacing: "-2px", margin: "0 0 20px",
@@ -688,9 +688,51 @@ export default function App() {
                                                 transition: "all 0.12s",
                                                 lineHeight: 1.3,
                                             }, onMouseOver: (e) => { e.currentTarget.style.background = "#e8e8eb"; e.currentTarget.style.borderColor = "#d1d5db"; }, onMouseOut: (e) => { e.currentTarget.style.background = "#f5f5f7"; e.currentTarget.style.borderColor = "#ebebee"; }, children: m }, m))) }))] }, def.id));
-                        })] })) })), _jsx("div", { style: { flex: 1 }, onDrop: onDrop, onDragOver: onDragOver, children: _jsxs(ReactFlow, { nodes: nodes, edges: edges, onNodesChange: onNodesChange, onEdgesChange: onEdgesChange, onConnect: onConnect, nodeTypes: nodeTypes, fitView: true, style: { background: "#f0f0f2" }, defaultEdgeOptions: {
-                        animated: false,
-                        style: { stroke: "#d1d5db", strokeWidth: 1.5 },
-                        type: "smoothstep",
-                    }, children: [_jsx(Background, { variant: BackgroundVariant.Dots, color: "#c0c0c6", gap: 28, size: 1.2 }), _jsx(Controls, { style: { background: "#ffffff", border: "1px solid #e8e8eb", borderRadius: 10, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" } }), _jsx(MiniMap, { style: { background: "#ffffff", borderRadius: 10, border: "1px solid #e8e8eb", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }, nodeColor: "#d1d5db", maskColor: "rgba(240,240,242,0.8)" })] }) })] }));
+                        })] })) })), _jsxs("div", { style: { flex: 1, display: "flex", flexDirection: "column" }, onDrop: onDrop, onDragOver: onDragOver, children: [_jsx("div", { style: {
+                            display: "flex", alignItems: "center", gap: 8,
+                            padding: "10px 16px", background: "#0e0e10",
+                            borderBottom: "1px solid #1e1e22",
+                            flexShrink: 0,
+                        }, children: [
+                            { label: "New Scene", icon: "◎", active: true },
+                            { label: "New Image", icon: "◫", active: false },
+                            { label: "New Video", icon: "▶", active: false },
+                            { label: "Add Voice", icon: "🎙", active: false },
+                            { label: "Add Reference", icon: "◈", active: false },
+                        ].map((btn) => (_jsxs("button", { onClick: () => {
+                                if (btn.label === "New Image") {
+                                    const imgDef = NODE_DEFS.find((d) => d.id === "image.text_to_image");
+                                    if (imgDef)
+                                        addNodeWithHandler(imgDef);
+                                }
+                                else if (btn.label === "New Video") {
+                                    const vidDef = NODE_DEFS.find((d) => d.id === "video.text_to_video");
+                                    if (vidDef)
+                                        addNodeWithHandler(vidDef);
+                                }
+                                else if (btn.label === "Add Voice") {
+                                    const llmDef = NODE_DEFS.find((d) => d.id === "text.llm");
+                                    if (llmDef)
+                                        addNodeWithHandler(llmDef);
+                                }
+                                else if (btn.label === "New Scene") {
+                                    const txtDef = NODE_DEFS.find((d) => d.id === "text.input");
+                                    if (txtDef)
+                                        addNodeWithHandler(txtDef);
+                                }
+                            }, style: {
+                                display: "flex", alignItems: "center", gap: 8,
+                                padding: "8px 18px", borderRadius: 8,
+                                border: btn.active ? "none" : "1px solid #2a2a30",
+                                background: btn.active ? "#c026d3" : "#141416",
+                                color: btn.active ? "#fff" : "#9ca3af",
+                                fontSize: 13, fontWeight: 600, cursor: "pointer",
+                                transition: "all 0.15s",
+                            }, onMouseOver: (e) => { if (!btn.active)
+                                e.currentTarget.style.borderColor = "#444"; }, onMouseOut: (e) => { if (!btn.active)
+                                e.currentTarget.style.borderColor = "#2a2a30"; }, children: [_jsx("span", { style: { fontSize: 14 }, children: btn.icon }), btn.label] }, btn.label))) }), _jsx("div", { style: { flex: 1 }, children: _jsxs(ReactFlow, { nodes: nodes, edges: edges, onNodesChange: onNodesChange, onEdgesChange: onEdgesChange, onConnect: onConnect, nodeTypes: nodeTypes, fitView: true, style: { background: "#f0f0f2" }, defaultEdgeOptions: {
+                                animated: false,
+                                style: { stroke: "#d1d5db", strokeWidth: 1.5 },
+                                type: "smoothstep",
+                            }, children: [_jsx(Background, { variant: BackgroundVariant.Dots, color: "#c0c0c6", gap: 28, size: 1.2 }), _jsx(Controls, { style: { background: "#ffffff", border: "1px solid #e8e8eb", borderRadius: 10, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" } }), _jsx(MiniMap, { style: { background: "#ffffff", borderRadius: 10, border: "1px solid #e8e8eb", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }, nodeColor: "#d1d5db", maskColor: "rgba(240,240,242,0.8)" })] }) })] })] }));
 }

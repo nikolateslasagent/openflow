@@ -1093,8 +1093,57 @@ export default function App() {
         </aside>
       )}
 
-      {/* Canvas */}
-      <div style={{ flex: 1 }} onDrop={onDrop} onDragOver={onDragOver}>
+      {/* Canvas + top bar */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column" }} onDrop={onDrop} onDragOver={onDragOver}>
+        {/* Top action bar */}
+        <div style={{
+          display: "flex", alignItems: "center", gap: 8,
+          padding: "10px 16px", background: "#0e0e10",
+          borderBottom: "1px solid #1e1e22",
+          flexShrink: 0,
+        }}>
+          {[
+            { label: "New Scene", icon: "◎", active: true },
+            { label: "New Image", icon: "◫", active: false },
+            { label: "New Video", icon: "▶", active: false },
+            { label: "Add Voice", icon: "🎙", active: false },
+            { label: "Add Reference", icon: "◈", active: false },
+          ].map((btn) => (
+            <button
+              key={btn.label}
+              onClick={() => {
+                if (btn.label === "New Image") {
+                  const imgDef = NODE_DEFS.find((d) => d.id === "image.text_to_image");
+                  if (imgDef) addNodeWithHandler(imgDef);
+                } else if (btn.label === "New Video") {
+                  const vidDef = NODE_DEFS.find((d) => d.id === "video.text_to_video");
+                  if (vidDef) addNodeWithHandler(vidDef);
+                } else if (btn.label === "Add Voice") {
+                  const llmDef = NODE_DEFS.find((d) => d.id === "text.llm");
+                  if (llmDef) addNodeWithHandler(llmDef);
+                } else if (btn.label === "New Scene") {
+                  const txtDef = NODE_DEFS.find((d) => d.id === "text.input");
+                  if (txtDef) addNodeWithHandler(txtDef);
+                }
+              }}
+              style={{
+                display: "flex", alignItems: "center", gap: 8,
+                padding: "8px 18px", borderRadius: 8,
+                border: btn.active ? "none" : "1px solid #2a2a30",
+                background: btn.active ? "#c026d3" : "#141416",
+                color: btn.active ? "#fff" : "#9ca3af",
+                fontSize: 13, fontWeight: 600, cursor: "pointer",
+                transition: "all 0.15s",
+              }}
+              onMouseOver={(e) => { if (!btn.active) e.currentTarget.style.borderColor = "#444"; }}
+              onMouseOut={(e) => { if (!btn.active) e.currentTarget.style.borderColor = "#2a2a30"; }}
+            >
+              <span style={{ fontSize: 14 }}>{btn.icon}</span>
+              {btn.label}
+            </button>
+          ))}
+        </div>
+      <div style={{ flex: 1 }}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -1120,6 +1169,7 @@ export default function App() {
             maskColor="rgba(240,240,242,0.8)"
           />
         </ReactFlow>
+      </div>
       </div>
     </div>
   );

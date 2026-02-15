@@ -506,8 +506,9 @@ export default function App() {
         addEdge(
           {
             ...connection,
-            animated: true,
-            style: { stroke: "#6366f1", strokeWidth: 2 },
+            animated: false,
+            type: "smoothstep",
+            style: { stroke: "#d1d5db", strokeWidth: 1.5 },
           },
           eds
         )

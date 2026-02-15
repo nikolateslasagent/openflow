@@ -362,7 +362,90 @@ const nodeTypes = { flowNode: FlowNode };
 // ---------------------------------------------------------------------------
 // App
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Landing Page
+// ---------------------------------------------------------------------------
+function LandingPage({ onEnter }) {
+    return (_jsxs("div", { style: {
+            display: "flex", height: "100vh", width: "100vw",
+            fontFamily: "'Inter', -apple-system, sans-serif",
+            background: "#0a0a0b",
+            color: "#ffffff",
+            overflow: "hidden",
+        }, children: [_jsxs("div", { style: {
+                    flex: 1, display: "flex", flexDirection: "column",
+                    justifyContent: "center", padding: "60px 80px",
+                    maxWidth: 640, minWidth: 400,
+                }, children: [_jsxs("div", { style: {
+                            position: "absolute", top: 0, left: 0, right: 0,
+                            padding: "24px 80px", display: "flex", alignItems: "center",
+                            justifyContent: "space-between", zIndex: 10,
+                        }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 10 }, children: [_jsx("div", { style: {
+                                            width: 32, height: 32, borderRadius: "50%",
+                                            background: "#c026d3", display: "flex", alignItems: "center",
+                                            justifyContent: "center", fontSize: 12, fontWeight: 800, color: "#fff",
+                                        }, children: "OF" }), _jsx("span", { style: { fontSize: 16, fontWeight: 700, letterSpacing: "-0.5px" }, children: "OpenFlow" })] }), _jsxs("div", { style: { display: "flex", alignItems: "center", gap: 24 }, children: [_jsx("a", { href: "https://github.com/nikolateslasagent/openflow", target: "_blank", rel: "noopener", style: { color: "#9ca3af", fontSize: 13, textDecoration: "none", fontWeight: 500 }, children: "GitHub" }), _jsx("button", { onClick: onEnter, style: {
+                                            padding: "8px 20px", borderRadius: 8, border: "1px solid #333",
+                                            background: "transparent", color: "#fff", fontSize: 13, fontWeight: 600,
+                                            cursor: "pointer",
+                                        }, children: "Get started" })] })] }), _jsxs("div", { style: {
+                            display: "inline-flex", alignItems: "center", gap: 8,
+                            background: "#1a1a1f", border: "1px solid #2a2a30",
+                            borderRadius: 20, padding: "6px 16px", marginBottom: 32,
+                            width: "fit-content",
+                        }, children: [_jsx("span", { style: {
+                                    width: 8, height: 8, borderRadius: "50%",
+                                    background: "#ef4444", boxShadow: "0 0 0 3px rgba(239,68,68,0.2)",
+                                } }), _jsx("span", { style: { fontSize: 12, fontWeight: 600, color: "#e5e7eb", letterSpacing: "0.3px" }, children: "NO SUBSCRIPTIONS & NO MARKUP!" })] }), _jsxs("h1", { style: {
+                            fontSize: 52, fontWeight: 800, lineHeight: 1.1,
+                            letterSpacing: "-2px", margin: "0 0 20px",
+                            background: "linear-gradient(to bottom, #ffffff, #a0a0a8)",
+                            WebkitBackgroundClip: "text",
+                            WebkitTextFillColor: "transparent",
+                        }, children: ["Your Creative", _jsx("br", {}), "Agent"] }), _jsx("p", { style: {
+                            fontSize: 16, lineHeight: 1.6, color: "#9ca3af",
+                            margin: "0 0 40px", maxWidth: 420,
+                        }, children: "Imagine anything and bring it to life \u2014 from images to sounds to video. All in one place." }), _jsxs("button", { onClick: onEnter, style: {
+                            display: "inline-flex", alignItems: "center", gap: 8,
+                            padding: "14px 28px", borderRadius: 10,
+                            border: "1px solid #333", background: "#ffffff",
+                            color: "#0a0a0b", fontSize: 15, fontWeight: 600,
+                            cursor: "pointer", width: "fit-content",
+                            transition: "transform 0.15s",
+                            letterSpacing: "-0.3px",
+                        }, onMouseOver: (e) => { e.currentTarget.style.transform = "translateY(-1px)"; }, onMouseOut: (e) => { e.currentTarget.style.transform = "translateY(0)"; }, children: ["Get started for free ", _jsx("span", { style: { fontSize: 16 }, children: "\u2192" })] })] }), _jsxs("div", { style: {
+                    flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
+                    position: "relative", overflow: "hidden",
+                    background: "linear-gradient(135deg, #0f0f12 0%, #1a1a22 50%, #0f0f12 100%)",
+                }, children: [_jsx("div", { style: {
+                            position: "absolute", width: 400, height: 400, borderRadius: "50%",
+                            background: "radial-gradient(circle, rgba(192,38,211,0.15) 0%, transparent 70%)",
+                            top: "20%", left: "30%", filter: "blur(60px)",
+                        } }), _jsx("div", { style: {
+                            position: "absolute", width: 300, height: 300, borderRadius: "50%",
+                            background: "radial-gradient(circle, rgba(99,102,241,0.1) 0%, transparent 70%)",
+                            bottom: "20%", right: "20%", filter: "blur(60px)",
+                        } }), _jsxs("div", { style: {
+                            width: 520, background: "#1a1a1f",
+                            borderRadius: 12, border: "1px solid #2a2a30",
+                            boxShadow: "0 25px 80px rgba(0,0,0,0.5)",
+                            overflow: "hidden", position: "relative",
+                        }, children: [_jsxs("div", { style: {
+                                    padding: "12px 16px", display: "flex", gap: 6,
+                                    borderBottom: "1px solid #2a2a30",
+                                }, children: [_jsx("span", { style: { width: 10, height: 10, borderRadius: "50%", background: "#ef4444" } }), _jsx("span", { style: { width: 10, height: 10, borderRadius: "50%", background: "#f59e0b" } }), _jsx("span", { style: { width: 10, height: 10, borderRadius: "50%", background: "#22c55e" } })] }), _jsx("div", { style: {
+                                    height: 360, display: "flex", alignItems: "center", justifyContent: "center",
+                                    background: "linear-gradient(180deg, #0e0e12 0%, #141418 100%)",
+                                }, children: _jsxs("div", { style: { textAlign: "center" }, children: [_jsx("div", { style: {
+                                                width: 48, height: 48, borderRadius: "50%",
+                                                background: "#c026d3", display: "flex", alignItems: "center",
+                                                justifyContent: "center", fontSize: 18, fontWeight: 800,
+                                                margin: "0 auto 16px", color: "#fff",
+                                            }, children: "OF" }), _jsx("div", { style: { fontSize: 14, color: "#6b7280", fontWeight: 500 }, children: "Your workspace awaits" }), _jsx("div", { style: { fontSize: 11, color: "#4b5563", marginTop: 4 }, children: "18 image models \u00B7 14 video models \u00B7 unlimited creativity" })] }) })] })] })] }));
+}
+// ---------------------------------------------------------------------------
 export default function App() {
+    const [showLanding, setShowLanding] = useState(true);
     const [nodes, setNodes, onNodesChange] = useNodesState([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState([]);
     const [isRunning, setIsRunning] = useState(false);
@@ -514,6 +597,9 @@ export default function App() {
     }, []);
     const [activePanel, setActivePanel] = useState(null);
     const categories = Object.keys(grouped);
+    if (showLanding) {
+        return _jsx(LandingPage, { onEnter: () => setShowLanding(false) });
+    }
     return (_jsxs("div", { style: { display: "flex", height: "100vh", background: "#f0f0f2", color: "#1a1a1a", fontFamily: "'SF Pro Display', 'Inter', -apple-system, 'Helvetica Neue', sans-serif" }, children: [_jsxs("nav", { style: {
                     width: 56,
                     background: "#0e0e10",

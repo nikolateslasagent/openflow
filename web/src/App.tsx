@@ -329,24 +329,29 @@ function FlowNode({ data, selected }: NodeProps) {
         </span>
       </div>
 
-      {/* Input handles + fields */}
+      {/* Single input handle */}
+      {def.inputs.length > 0 && (
+        <Handle
+          type="target"
+          position={Position.Left}
+          id="in"
+          style={{
+            width: 10,
+            height: 10,
+            background: "#d1d5db",
+            border: "2px solid #ffffff",
+            left: -6,
+            top: "50%",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+          }}
+        />
+      )}
+
+      {/* Input fields */}
       <div className="nodrag nowheel" style={{ padding: "4px 0 12px" }}>
         {def.inputs.map((inp) => (
-          <div key={inp.name} style={{ position: "relative", padding: "3px 18px" }}>
+          <div key={inp.name} style={{ padding: "3px 18px" }}>
             <div style={{ fontSize: 10, fontWeight: 500, color: "#9ca3af", marginBottom: 3 }}>{inp.description}</div>
-            <Handle
-              type="target"
-              position={Position.Left}
-              id={inp.name}
-              style={{
-                width: 9,
-                height: 9,
-                background: "#d1d5db",
-                border: "2px solid #ffffff",
-                left: -5,
-                boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-              }}
-            />
             {inp.type === "string" && !inp.options && (
               inp.name === "prompt" || inp.name === "system" ? (
                 <textarea onKeyDown={stopKeys}
@@ -473,27 +478,22 @@ function FlowNode({ data, selected }: NodeProps) {
         </div>
       )}
 
-      {/* Output handles */}
+      {/* Single output handle */}
       {def.outputs.length > 0 && (
-        <div style={{ padding: "8px 0 16px" }}>
-          {def.outputs.map((out) => (
-            <div key={out.name} style={{ position: "relative", padding: "4px 18px", textAlign: "right" }}>
-              <Handle
-                type="source"
-                position={Position.Right}
-                id={out.name}
-                style={{
-                  width: 9,
-                  height: 9,
-                  background: "#d1d5db",
-                  border: "2px solid #ffffff",
-                  right: -5,
-                  boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-                }}
-              />
-            </div>
-          ))}
-        </div>
+        <Handle
+          type="source"
+          position={Position.Right}
+          id="out"
+          style={{
+            width: 10,
+            height: 10,
+            background: "#d1d5db",
+            border: "2px solid #ffffff",
+            right: -6,
+            top: "50%",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+          }}
+        />
       )}
     </div>
   );

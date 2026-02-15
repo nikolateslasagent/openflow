@@ -373,7 +373,7 @@ export default function App() {
     const [nodes, setNodes, onNodesChange] = useNodesState([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState([]);
     const [isRunning, setIsRunning] = useState(false);
-    const [falApiKey, setFalApiKey] = useState(() => localStorage.getItem("openflow_fal_key") || "");
+    const [falApiKey, setFalApiKey] = useState(() => localStorage.getItem("openflow_fal_key") || "148ec4ac-aafc-416b-9213-74cacdeefe5e:0dc2faa972e5762ba57fc758b2fd99e8");
     const idCounter = useRef(0);
     const grouped = useMemo(() => groupByCategory(NODE_DEFS), []);
     const onConnect = useCallback((connection) => {

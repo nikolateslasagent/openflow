@@ -5,7 +5,7 @@
  * from the palette onto the canvas, connect them, and execute workflows.
  */
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import {
   ReactFlow,
   Background,
@@ -118,8 +118,6 @@ function groupByCategory(nodes: NodeDefinition[]) {
 export default function App() {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
-  const [selectedNode, setSelectedNode] = useState<Node | null>(null);
-
   const grouped = useMemo(() => groupByCategory(SAMPLE_NODES), []);
 
   const onConnect = useCallback(

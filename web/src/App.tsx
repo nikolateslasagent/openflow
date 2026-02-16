@@ -1150,8 +1150,7 @@ export default function App() {
       skipHistoryRef.current = true;
       // Restore nodes with handlers
       const restoredNodes = state.nodes.map((n: Node) => {
-        const def = n.data.def as NodeDef;
-        return { ...n, data: { ...n.data, onChange: (key: string, val: unknown) => updateNodeValue(n.id, key, val), onRun: () => runSingleNodeRef.current(n.id), onDelete: () => setNodes((nds: Node[]) => nds.filter((nd: Node) => nd.id !== n.id)) } };
+        return { ...n, data: { ...n.data, onChange: (key: string, val: unknown) => updateNodeValue(n.id, key, val), onRun: () => runSingleNodeRef.current(n.id), onDelete: () => setNodes((nds: Node[]) => nds.filter((nd: Node) => nd.id !== n.id)), onPreview: (url: string, type: "image" | "video") => setPreviewModal({ url, type }) } };
       });
       setNodes(restoredNodes);
       setEdges(state.edges);
@@ -1167,8 +1166,7 @@ export default function App() {
       setUndoStack(u => [...u, { nodes: JSON.parse(JSON.stringify(nodes)), edges: JSON.parse(JSON.stringify(edges)) }]);
       skipHistoryRef.current = true;
       const restoredNodes = state.nodes.map((n: Node) => {
-        const def = n.data.def as NodeDef;
-        return { ...n, data: { ...n.data, onChange: (key: string, val: unknown) => updateNodeValue(n.id, key, val), onRun: () => runSingleNodeRef.current(n.id), onDelete: () => setNodes((nds: Node[]) => nds.filter((nd: Node) => nd.id !== n.id)) } };
+        return { ...n, data: { ...n.data, onChange: (key: string, val: unknown) => updateNodeValue(n.id, key, val), onRun: () => runSingleNodeRef.current(n.id), onDelete: () => setNodes((nds: Node[]) => nds.filter((nd: Node) => nd.id !== n.id)), onPreview: (url: string, type: "image" | "video") => setPreviewModal({ url, type }) } };
       });
       setNodes(restoredNodes);
       setEdges(state.edges);

@@ -1129,6 +1129,15 @@ export default function App() {
   const skipHistoryRef = useRef(false);
   const idCounter = useRef(0);
   const { addToast, ToastContainer } = useToast();
+  const [showGallery, setShowGallery] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(() => shouldShowTutorial());
+  const [nodeComments, setNodeComments] = useState<Record<string, string>>(() => {
+    try { return JSON.parse(localStorage.getItem("openflow_node_comments") || "{}"); } catch { return {}; }
+  });
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; nodeId: string } | null>(null);
+  const [editingComment, setEditingComment] = useState<string | null>(null);
+  // suppress unused warnings
+  void showGallery; void showTutorial; void contextMenu; void editingComment;
 
   const grouped = useMemo(() => groupByCategory(NODE_DEFS), []);
 
@@ -1461,6 +1470,24 @@ export default function App() {
     localStorage.setItem("openflow_dark", String(darkMode));
   }, [darkMode]);
 
+  // Persist node comments
+  useEffect(() => {
+    localStorage.setItem("openflow_node_comments", JSON.stringify(nodeComments));
+  }, [nodeComments]);
+
+  // Workflow sharing: check URL hash on load
+  useEffect(() => {
+    const wf = decodeWorkflowFromHash();
+    if (wf && (wf as { nodes?: unknown }).nodes) {
+      if (confirm("A shared workflow was found in the URL. Import it?")) {
+        loadProject(JSON.stringify(wf));
+        setShowLanding(false);
+        setCurrentView("canvas");
+        addToast("Workflow imported from shared link!", "success");
+      }
+    }
+  }, []);
+
   const onDragStart = (e: DragEvent, def: NodeDef) => {
     e.dataTransfer.setData("application/openflow-node", JSON.stringify(def));
     e.dataTransfer.effectAllowed = "move";
@@ -1762,7 +1789,7 @@ export default function App() {
 
       {/* Flyout panel */}
       {activePanel && (
-        <aside style={{ width: activePanel === "chat" ? 300 : activePanel === "models" ? 280 : 220, background: "#ffffff", borderRight: "1px solid #ebebee", overflowY: "auto", flexShrink: 0, zIndex: 15, boxShadow: "4px 0 16px rgba(0,0,0,0.03)", display: "flex", flexDirection: "column" }}>
+        <aside style={{ width: activePanel === "chat" ? 300 : activePanel === "models" ? 280 : 220, background: "#ffffff", borderRight: "1px solid #ebebee", overflowY: "auto", flexShrink: 0, zIndex: 15, boxShadow: "4px 0 16px rgba(0,0,0,0.03)", display: "flex", flexDirection: "column", animation: "slideFlyout 0.2s ease-out" }}>
           {activePanel === "models" ? (
             <ModelManagerPanel onCreateNode={(defId, modelKey) => {
               const def = NODE_DEFS.find(d => d.id === defId);
@@ -1883,7 +1910,7 @@ export default function App() {
 
               <div style={{ fontSize: 10, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.8px", marginTop: 16, marginBottom: 6 }}>About</div>
               <div style={{ fontSize: 11, color: "#6b7280", lineHeight: 1.8 }}>
-                OpenFlow v5.0 — Sprint 5<br />
+                OpenFlow v6.0 — Sprint 6<br />
                 <a href="https://github.com/nikolateslasagent/openflow" target="_blank" rel="noopener" style={{ color: "#c026d3", textDecoration: "none" }}>GitHub</a> · <a href="https://openflow-docs.vercel.app" target="_blank" rel="noopener" style={{ color: "#c026d3", textDecoration: "none" }}>Docs</a>
               </div>
 
@@ -1999,6 +2026,22 @@ export default function App() {
               style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid #2a2a30", background: "#141416", color: undoStack.length > 0 ? "#9ca3af" : "#4a4a50", fontSize: 12, cursor: undoStack.length > 0 ? "pointer" : "not-allowed" }}>↩</button>
             <button onClick={() => redo()} disabled={redoStack.length === 0} title="Redo (Ctrl+Shift+Z)"
               style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid #2a2a30", background: "#141416", color: redoStack.length > 0 ? "#9ca3af" : "#4a4a50", fontSize: 12, cursor: redoStack.length > 0 ? "pointer" : "not-allowed" }}>↪</button>
+            <button onClick={() => setShowGallery(true)} title="Gallery view"
+              style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, border: "1px solid #2a2a30", background: "#141416", color: "#9ca3af", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+              🖼️ Gallery
+            </button>
+            <button onClick={() => {
+              const workflow = { nodes: nodes.map(n => ({ id: n.id, type: n.type, position: n.position, defId: (n.data.def as NodeDef).id, values: n.data.values, comment: nodeComments[n.id] })), edges };
+              const url = encodeWorkflowToUrl(workflow);
+              navigator.clipboard.writeText(url).then(() => addToast("Share link copied to clipboard!", "success")).catch(() => { prompt("Copy this link:", url); });
+            }} title="Share workflow"
+              style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, border: "1px solid #2a2a30", background: "#141416", color: "#9ca3af", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+              🔗 Share
+            </button>
+            <button onClick={() => setShowTutorial(true)} title="Help / Tutorial"
+              style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 10px", borderRadius: 8, border: "1px solid #2a2a30", background: "#141416", color: "#9ca3af", fontSize: 12, cursor: "pointer" }}>
+              ❓
+            </button>
             <button onClick={exportWorkflow} title="Export workflow"
               style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, border: "1px solid #2a2a30", background: "#141416", color: "#9ca3af", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
               📤 Export
@@ -2042,11 +2085,48 @@ export default function App() {
             <div style={{ flex: 1 }}>
               <ReactFlow nodes={nodes} edges={edges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect}
                 nodeTypes={nodeTypes} fitView style={{ background: "#f0f0f2" }}
+                onNodeContextMenu={(e, node) => { e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY, nodeId: node.id }); }}
+                onClick={() => setContextMenu(null)}
                 defaultEdgeOptions={{ animated: isRunning, style: { stroke: "#d1d5db", strokeWidth: 1.5 }, type: "smoothstep" }}>
                 <Background variant={BackgroundVariant.Dots} color="#c0c0c6" gap={28} size={1.2} />
                 <Controls style={{ background: "#ffffff", border: "1px solid #e8e8eb", borderRadius: 10, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }} />
                 <MiniMap style={{ background: "#ffffff", borderRadius: 10, border: "1px solid #e8e8eb", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }} nodeColor="#d1d5db" maskColor="rgba(240,240,242,0.8)" />
               </ReactFlow>
+              {/* Node comment sticky notes */}
+              {nodes.filter(n => nodeComments[n.id]).map(n => (
+                <div key={`comment-${n.id}`} style={{ position: "absolute", left: (n.position?.x || 0) + 270, top: (n.position?.y || 0) - 10, width: 120, minHeight: 60, background: "#fef9c3", border: "1px solid #fde68a", borderRadius: 8, padding: 8, fontSize: 10, color: "#713f12", fontFamily: "'Inter', sans-serif", boxShadow: "0 2px 8px rgba(0,0,0,0.08)", zIndex: 5, pointerEvents: "auto" }}
+                  onDoubleClick={() => setEditingComment(n.id)}>
+                  {editingComment === n.id ? (
+                    <textarea autoFocus value={nodeComments[n.id] || ""} onChange={e => setNodeComments(c => ({ ...c, [n.id]: e.target.value }))}
+                      onBlur={() => setEditingComment(null)} onKeyDown={e => { if (e.key === "Escape") setEditingComment(null); e.stopPropagation(); }}
+                      style={{ width: "100%", minHeight: 40, background: "transparent", border: "none", fontSize: 10, color: "#713f12", resize: "vertical", outline: "none", fontFamily: "inherit" }} />
+                  ) : (
+                    <div style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{nodeComments[n.id]}</div>
+                  )}
+                  <button onClick={() => setNodeComments(c => { const nc = { ...c }; delete nc[n.id]; return nc; })}
+                    style={{ position: "absolute", top: 2, right: 4, background: "none", border: "none", fontSize: 10, color: "#ca8a04", cursor: "pointer", padding: 0 }}>✕</button>
+                </div>
+              ))}
+              {/* Right-click context menu */}
+              {contextMenu && (
+                <div style={{ position: "fixed", left: contextMenu.x, top: contextMenu.y, background: "#fff", border: "1px solid #e8e8eb", borderRadius: 10, boxShadow: "0 4px 16px rgba(0,0,0,0.12)", zIndex: 100, padding: 4, minWidth: 160 }}>
+                  <button onClick={() => { setNodeComments(c => ({ ...c, [contextMenu.nodeId]: c[contextMenu.nodeId] || "Note..." })); setEditingComment(contextMenu.nodeId); setContextMenu(null); }}
+                    style={{ width: "100%", padding: "8px 12px", background: "none", border: "none", fontSize: 12, cursor: "pointer", textAlign: "left", borderRadius: 6, color: "#1a1a1a" }}
+                    onMouseOver={e => e.currentTarget.style.background = "#f5f5f7"} onMouseOut={e => e.currentTarget.style.background = "none"}>
+                    📝 Add Note
+                  </button>
+                  <button onClick={() => { const n = nodes.find(nd => nd.id === contextMenu.nodeId); if (n) { const def = n.data.def as NodeDef; const vals = n.data.values as Record<string, unknown>; idCounter.current++; addNodeWithHandler(def, vals); } setContextMenu(null); }}
+                    style={{ width: "100%", padding: "8px 12px", background: "none", border: "none", fontSize: 12, cursor: "pointer", textAlign: "left", borderRadius: 6, color: "#1a1a1a" }}
+                    onMouseOver={e => e.currentTarget.style.background = "#f5f5f7"} onMouseOut={e => e.currentTarget.style.background = "none"}>
+                    📋 Duplicate
+                  </button>
+                  <button onClick={() => { pushUndo(); setNodes(nds => nds.filter(n => n.id !== contextMenu.nodeId)); setContextMenu(null); }}
+                    style={{ width: "100%", padding: "8px 12px", background: "none", border: "none", fontSize: 12, cursor: "pointer", textAlign: "left", borderRadius: 6, color: "#ef4444" }}
+                    onMouseOver={e => e.currentTarget.style.background = "#fef2f2"} onMouseOut={e => e.currentTarget.style.background = "none"}>
+                    🗑 Delete
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -2067,9 +2147,17 @@ export default function App() {
           </div>
         </div>
       )}
+      {showGallery && (
+        <GalleryView assets={assets} onClose={() => setShowGallery(false)} onUseAsInput={(url) => {
+          const def = NODE_DEFS.find(d => d.id === "image.input");
+          if (def) { addNodeWithHandler(def, { image_url: url }); setCurrentView("canvas"); addToast("Added as Image Input node!", "success"); }
+        }} />
+      )}
+      {showTutorial && <TutorialOverlay onDismiss={() => setShowTutorial(false)} />}
       <ToastContainer />
       <style>{`
         @keyframes slideIn { from { transform: translateX(100px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes slideFlyout { from { transform: translateX(-20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         .react-flow__edge.animated path { stroke-dasharray: 5; animation: flowDash 0.5s linear infinite; }
         @keyframes flowDash { to { stroke-dashoffset: -10; } }
         @media (max-width: 768px) {

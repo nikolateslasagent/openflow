@@ -2161,10 +2161,13 @@ export default function App() {
                     📋 JSON Workflow
                   </button>
                   <button onClick={() => {
-                    import("https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/+esm").then(mod => {
-                      const el = document.querySelector(".react-flow") as HTMLElement;
-                      if (el) mod.default(el).then((c: HTMLCanvasElement) => { const a = document.createElement("a"); a.href = c.toDataURL("image/png"); a.download = "openflow-canvas.png"; a.click(); });
-                    }).catch(() => { exportWorkflow(); });
+                    const el = document.querySelector(".react-flow") as HTMLElement;
+                    if (el) {
+                      // @ts-expect-error dynamic CDN import
+                      import(/* @vite-ignore */ "https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/+esm").then((mod: { default: (el: HTMLElement) => Promise<HTMLCanvasElement> }) => {
+                        mod.default(el).then((c) => { const a = document.createElement("a"); a.href = c.toDataURL("image/png"); a.download = "openflow-canvas.png"; a.click(); });
+                      }).catch(() => { exportWorkflow(); });
+                    }
                     setShowExportMenu(false);
                   }}
                     style={{ width: "100%", padding: "8px 12px", background: "none", border: "none", fontSize: 12, cursor: "pointer", textAlign: "left", borderRadius: 6, color: "#e0e0e5" }}

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback } from "react";
 
 // ---- Types ----
 export interface TimelineClip {
@@ -155,7 +155,7 @@ export default function TimelineEditor({ assets, onExportVideo }: TimelineEditor
           </div>
 
           {/* Tracks */}
-          {TRACKS.map((track, ti) => {
+          {TRACKS.map((track) => {
             const trackType = track === "Video" ? "video" : track === "Audio" ? "audio" : "caption";
             const trackClips = clips.filter(c => c.type === trackType);
             const colors: Record<string, string> = { Video: "#c026d3", Audio: "#22c55e", Captions: "#f59e0b" };

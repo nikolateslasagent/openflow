@@ -1457,7 +1457,7 @@ export default function App() {
 
   // Export workflow as JSON
   const exportWorkflow = useCallback(() => {
-    const workflow = { nodes: nodes.map(n => ({ id: n.id, type: n.type, position: n.position, defId: (n.data.def as NodeDef).id, values: n.data.values })), edges };
+    const workflow = { nodes: nodes.map(n => ({ id: n.id, type: n.type, position: n.position, defId: (n.data.def as NodeDef).id, values: n.data.values, comment: nodeComments[n.id] })), edges };
     const blob = new Blob([JSON.stringify(workflow, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a"); a.href = url; a.download = `openflow-workflow-${Date.now()}.json`; a.click();

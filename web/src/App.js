@@ -1029,7 +1029,7 @@ export default function App() {
     }, [addNodeWithHandler, pushUndo, addToast]);
     // Export workflow as JSON
     const exportWorkflow = useCallback(() => {
-        const workflow = { nodes: nodes.map(n => ({ id: n.id, type: n.type, position: n.position, defId: n.data.def.id, values: n.data.values })), edges };
+        const workflow = { nodes: nodes.map(n => ({ id: n.id, type: n.type, position: n.position, defId: n.data.def.id, values: n.data.values, comment: nodeComments[n.id] })), edges };
         const blob = new Blob([JSON.stringify(workflow, null, 2)], { type: "application/json" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
@@ -1349,6 +1349,7 @@ export default function App() {
                     }
                 } })), showTutorial && _jsx(TutorialOverlay, { onDismiss: () => setShowTutorial(false) }), _jsx(ToastContainer, {}), _jsx("style", { children: `
         @keyframes slideIn { from { transform: translateX(100px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes slideFlyout { from { transform: translateX(-20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         .react-flow__edge.animated path { stroke-dasharray: 5; animation: flowDash 0.5s linear infinite; }
         @keyframes flowDash { to { stroke-dashoffset: -10; } }
         @media (max-width: 768px) {

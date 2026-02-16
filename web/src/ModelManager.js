@@ -1,4 +1,4 @@
-import { jsxs as _jsxs, jsx as _jsx } from "react/jsx-runtime";
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useState } from "react";
 const ALL_MODELS = [
     // Image Generation (18)
@@ -109,8 +109,8 @@ export function ModelManagerPanel({ onCreateNode }) {
             grouped[cat] = [];
         grouped[cat].push(m);
     }
-    const speedLabel = (s) => "⚡".repeat(s) + "░".repeat(5 - s);
-    return (_jsxs("div", { style: { padding: 16, height: "100%", display: "flex", flexDirection: "column" }, children: [_jsxs("div", { style: { fontSize: 13, fontWeight: 600, color: "#1a1a1a", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }, children: ["\uD83D\uDCE6 Model Manager", _jsxs("span", { style: { fontSize: 10, color: "#9ca3af", fontWeight: 400 }, children: [ALL_MODELS.length, " models"] })] }), _jsx("input", { value: search, onChange: e => setSearch(e.target.value), placeholder: "Search models...", style: { width: "100%", background: "#f5f5f7", border: "none", borderRadius: 8, fontSize: 12, padding: "8px 12px", outline: "none", marginBottom: 8, boxSizing: "border-box" } }), _jsxs("div", { style: { display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 8 }, children: [["all", "image", "video", "img2vid", "upscale"].map(c => (_jsx("button", { onClick: () => setFilterCat(c), style: {
+    const speedLabel = (s) => "●".repeat(s) + "○".repeat(5 - s);
+    return (_jsxs("div", { style: { padding: 16, height: "100%", display: "flex", flexDirection: "column" }, children: [_jsxs("div", { style: { fontSize: 13, fontWeight: 600, color: "#1a1a1a", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }, children: [_jsxs("svg", { width: "14", height: "14", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", style: { flexShrink: 0 }, children: [_jsx("path", { d: "M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" }), _jsx("polyline", { points: "3.27 6.96 12 12.01 20.73 6.96" }), _jsx("line", { x1: "12", y1: "22.08", x2: "12", y2: "12" })] }), " Model Manager", _jsxs("span", { style: { fontSize: 10, color: "#9ca3af", fontWeight: 400 }, children: [ALL_MODELS.length, " models"] })] }), _jsx("input", { value: search, onChange: e => setSearch(e.target.value), placeholder: "Search models...", style: { width: "100%", background: "#f5f5f7", border: "none", borderRadius: 8, fontSize: 12, padding: "8px 12px", outline: "none", marginBottom: 8, boxSizing: "border-box" } }), _jsxs("div", { style: { display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 8 }, children: [["all", "image", "video", "img2vid", "upscale"].map(c => (_jsx("button", { onClick: () => setFilterCat(c), style: {
                             padding: "4px 8px", borderRadius: 6, border: "none", fontSize: 9, fontWeight: 600,
                             background: filterCat === c ? "#c026d3" : "#f5f5f7", color: filterCat === c ? "#fff" : "#6b7280",
                             cursor: "pointer", textTransform: "capitalize",

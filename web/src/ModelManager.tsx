@@ -115,12 +115,12 @@ export function ModelManagerPanel({ onCreateNode }: { onCreateNode: (nodeDefId: 
     grouped[cat].push(m);
   }
 
-  const speedLabel = (s: number) => "⚡".repeat(s) + "░".repeat(5 - s);
+  const speedLabel = (s: number) => "●".repeat(s) + "○".repeat(5 - s);
 
   return (
     <div style={{ padding: 16, height: "100%", display: "flex", flexDirection: "column" }}>
       <div style={{ fontSize: 13, fontWeight: 600, color: "#1a1a1a", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
-        📦 Model Manager
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg> Model Manager
         <span style={{ fontSize: 10, color: "#9ca3af", fontWeight: 400 }}>{ALL_MODELS.length} models</span>
       </div>
       <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search models..."

@@ -27,7 +27,7 @@ const STEPS = [
   },
   {
     target: "[data-onboarding='generate']",
-    fallbackSelector: "button:has-text('Generate')",
+    fallbackSelector: "button[data-onboarding='generate'], button",
     title: "Click to Create",
     desc: "Hit the Generate button and watch your AI creation come to life. It usually takes 5-30 seconds.",
     icon: "✦",

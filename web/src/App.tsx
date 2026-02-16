@@ -22,6 +22,10 @@ import {
   BackgroundVariant,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import { ModelManagerPanel } from "./ModelManager";
+import { WorkflowTemplatesPanel, type WorkflowPipeline } from "./WorkflowTemplates";
+import { saveTrainingRecord, getTrainingDataCount, exportTrainingData } from "./TrainingData";
+import { useToast } from "./Toast";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -938,7 +942,9 @@ export default function App() {
   const [isRunning, setIsRunning] = useState(false);
   const [falApiKey, setFalApiKey] = useState(() => localStorage.getItem("openflow_fal_key") || "148ec4ac-aafc-416b-9213-74cacdeefe5e:0dc2faa972e5762ba57fc758b2fd99e8");
   const [assets, setAssets] = useState<Asset[]>(() => getAssets());
+  const [darkMode, setDarkMode] = useState(() => localStorage.getItem("openflow_dark") === "true");
   const idCounter = useRef(0);
+  const { addToast, ToastContainer } = useToast();
 
   const grouped = useMemo(() => groupByCategory(NODE_DEFS), []);
 
@@ -999,59 +1005,110 @@ export default function App() {
     const node = nodes.find((n) => n.id === nodeId);
     if (!node) return;
     const key = falApiKey;
-    if (!key) { alert("Set your fal.ai API key in Settings first!"); return; }
+    if (!key) { addToast("Set your fal.ai API key in Settings first!", "error"); return; }
     localStorage.setItem("openflow_fal_key", key);
 
     const def = node.data.def as NodeDef;
     const values = node.data.values as Record<string, unknown>;
     const modelKey = (values.model as string) || "flux-dev";
 
+    const startTime = Date.now();
     setNodeData(nodeId, { status: "running", outputUrl: undefined });
     const result = await runFalGeneration(modelKey, values, key);
     if (result.url) {
+      const genTime = Date.now() - startTime;
       setNodeData(nodeId, { status: "done", outputUrl: result.url });
-      // Save to asset manager
       const isVideo = def.category === "video" || def.id === "video.img_to_video";
-      saveAsset({
-        url: result.url,
-        type: isVideo ? "video" : "image",
-        prompt: (values.prompt as string) || (values.text as string) || "",
-        model: modelKey,
-        timestamp: Date.now(),
-      });
+      saveAsset({ url: result.url, type: isVideo ? "video" : "image", prompt: (values.prompt as string) || (values.text as string) || "", model: modelKey, timestamp: Date.now() });
+      saveTrainingRecord({ timestamp: Date.now(), model: modelKey, prompt: (values.prompt as string) || "", params: values, output_url: result.url, generation_time_ms: genTime, user_id: "local" });
       refreshAssets();
+      addToast(`Generated! (${(genTime / 1000).toFixed(1)}s)`, "success");
     } else {
       setNodeData(nodeId, { status: `Error: ${result.error}` });
+      addToast(`Error: ${result.error?.slice(0, 60)}`, "error");
     }
-  }, [nodes, falApiKey, setNodeData, refreshAssets]);
+  }, [nodes, falApiKey, setNodeData, refreshAssets, addToast]);
 
   runSingleNodeRef.current = runSingleNode;
 
   const handleRun = useCallback(async () => {
-    if (!falApiKey) { alert("Enter your fal.ai API key in the sidebar first!"); return; }
+    if (!falApiKey) { addToast("Enter your fal.ai API key in Settings!", "error"); return; }
     localStorage.setItem("openflow_fal_key", falApiKey);
     setIsRunning(true);
+    // Topological sort for dependency order
     const genNodes = nodes.filter((n) => {
       const def = n.data.def as NodeDef;
       return def.inputs.some((inp) => inp.name === "model");
     });
-    for (const node of genNodes) {
-      const def = node.data.def as NodeDef;
-      const values = node.data.values as Record<string, unknown>;
-      const modelKey = (values.model as string) || "flux-dev";
-      setNodeData(node.id, { status: "running", outputUrl: undefined });
-      const result = await runFalGeneration(modelKey, values, falApiKey);
-      if (result.url) {
-        setNodeData(node.id, { status: "done", outputUrl: result.url });
-        const isVideo = def.category === "video" || def.id === "video.img_to_video";
-        saveAsset({ url: result.url, type: isVideo ? "video" : "image", prompt: (values.prompt as string) || "", model: modelKey, timestamp: Date.now() });
-        refreshAssets();
-      } else {
-        setNodeData(node.id, { status: `Error: ${result.error}` });
+    const nodeIds = genNodes.map(n => n.id);
+    const inDegree: Record<string, number> = {};
+    const adj: Record<string, string[]> = {};
+    nodeIds.forEach(id => { inDegree[id] = 0; adj[id] = []; });
+    edges.forEach(e => {
+      if (nodeIds.includes(e.source) && nodeIds.includes(e.target)) {
+        adj[e.source].push(e.target);
+        inDegree[e.target] = (inDegree[e.target] || 0) + 1;
+      }
+    });
+    const queue = nodeIds.filter(id => inDegree[id] === 0);
+    const sorted: string[] = [];
+    while (queue.length) {
+      const id = queue.shift()!;
+      sorted.push(id);
+      for (const next of (adj[id] || [])) {
+        inDegree[next]--;
+        if (inDegree[next] === 0) queue.push(next);
       }
     }
+    // Add any remaining (cycles)
+    nodeIds.forEach(id => { if (!sorted.includes(id)) sorted.push(id); });
+
+    for (const nodeId of sorted) {
+      const node = genNodes.find(n => n.id === nodeId);
+      if (!node) continue;
+      await runSingleNode(nodeId);
+    }
     setIsRunning(false);
-  }, [nodes, falApiKey, setNodeData, refreshAssets]);
+    addToast("All nodes complete!", "success");
+  }, [nodes, edges, falApiKey, runSingleNode, addToast]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.target as HTMLElement).tagName === "INPUT" || (e.target as HTMLElement).tagName === "TEXTAREA" || (e.target as HTMLElement).tagName === "SELECT") return;
+      if (e.key === " " && !e.ctrlKey) {
+        e.preventDefault();
+        const selected = nodes.find(n => n.selected);
+        if (selected) runSingleNodeRef.current(selected.id);
+      }
+      if (e.key === "Delete" || e.key === "Backspace") {
+        const selected = nodes.filter(n => n.selected);
+        if (selected.length) setNodes(nds => nds.filter(n => !n.selected));
+      }
+      if (e.key === "s" && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        saveProject();
+        addToast("Project saved!", "success");
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [nodes, setNodes, addToast]);
+
+  // Export workflow as JSON
+  const exportWorkflow = useCallback(() => {
+    const workflow = { nodes: nodes.map(n => ({ id: n.id, type: n.type, position: n.position, defId: (n.data.def as NodeDef).id, values: n.data.values })), edges };
+    const blob = new Blob([JSON.stringify(workflow, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = `openflow-workflow-${Date.now()}.json`; a.click();
+    URL.revokeObjectURL(url);
+    addToast("Workflow exported!", "success");
+  }, [nodes, edges, addToast]);
+
+  // Dark mode effect
+  useEffect(() => {
+    localStorage.setItem("openflow_dark", String(darkMode));
+  }, [darkMode]);
 
   const onDragStart = (e: DragEvent, def: NodeDef) => {
     e.dataTransfer.setData("application/openflow-node", JSON.stringify(def));
@@ -1258,6 +1315,18 @@ export default function App() {
             dangerouslySetInnerHTML={{ __html: SVG_ICONS[cat] || "" }} />
         ))}
 
+        {/* Model Manager */}
+        <button title="Model Manager" onClick={() => { setActivePanel(activePanel === "models" ? null : "models"); }}
+          style={{ width: 38, height: 38, borderRadius: 10, border: "none", background: activePanel === "models" ? "#1e1e22" : "transparent", color: activePanel === "models" ? "#c026d3" : "#6b6b75", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        </button>
+
+        {/* Workflow Templates */}
+        <button title="Workflow Templates" onClick={() => { setActivePanel(activePanel === "workflows" ? null : "workflows"); }}
+          style={{ width: 38, height: 38, borderRadius: 10, border: "none", background: activePanel === "workflows" ? "#1e1e22" : "transparent", color: activePanel === "workflows" ? "#c026d3" : "#6b6b75", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="9" cy="16" r="1"/><circle cx="15" cy="16" r="1"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/><line x1="12" y1="4" x2="12" y2="2"/><line x1="10" y1="2" x2="14" y2="2"/></svg>
+        </button>
+
         <div style={{ flex: 1 }} />
 
         {/* Asset Manager */}
@@ -1295,8 +1364,15 @@ export default function App() {
 
       {/* Flyout panel */}
       {activePanel && (
-        <aside style={{ width: activePanel === "chat" ? 300 : 220, background: "#ffffff", borderRight: "1px solid #ebebee", overflowY: "auto", flexShrink: 0, zIndex: 15, boxShadow: "4px 0 16px rgba(0,0,0,0.03)", display: "flex", flexDirection: "column" }}>
-          {activePanel === "assets" ? (
+        <aside style={{ width: activePanel === "chat" ? 300 : activePanel === "models" ? 280 : 220, background: "#ffffff", borderRight: "1px solid #ebebee", overflowY: "auto", flexShrink: 0, zIndex: 15, boxShadow: "4px 0 16px rgba(0,0,0,0.03)", display: "flex", flexDirection: "column" }}>
+          {activePanel === "models" ? (
+            <ModelManagerPanel onCreateNode={(defId, modelKey) => {
+              const def = NODE_DEFS.find(d => d.id === defId);
+              if (def) { addNodeWithHandler(def, { model: modelKey }); setActivePanel(null); setCurrentView("canvas"); }
+            }} />
+          ) : activePanel === "workflows" ? (
+            <WorkflowTemplatesPanel onLoadPipeline={(pipeline) => { loadTemplate(pipeline); setActivePanel(null); }} />
+          ) : activePanel === "assets" ? (
             <AssetManagerPanel assets={assets} />
           ) : activePanel === "chat" ? (
             <ChatPanel />
@@ -1358,7 +1434,25 @@ export default function App() {
               <input type="password" value={falApiKey} onChange={(e) => setFalApiKey(e.target.value)} onKeyDown={stopKeys}
                 placeholder="fal-xxxxxxxx" style={{ width: "100%", background: "#f5f5f7", border: "none", borderRadius: 8, color: "#1a1a1a", fontSize: 12, padding: "8px 12px", outline: "none", boxSizing: "border-box" }} />
               <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 6 }}>Free at <a href="https://fal.ai/dashboard/keys" target="_blank" rel="noopener" style={{ color: "#1a1a1a", fontWeight: 600, textDecoration: "none" }}>fal.ai</a></div>
+
+              <div style={{ fontSize: 10, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.8px", marginTop: 20, marginBottom: 6 }}>Appearance</div>
+              <button onClick={() => setDarkMode(!darkMode)} style={{ width: "100%", padding: "8px 12px", background: "#f5f5f7", border: "1px solid #ebebee", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: "pointer", color: "#1a1a1a", textAlign: "left" }}>
+                {darkMode ? "🌙 Dark Mode ON" : "☀️ Light Mode"}
+              </button>
+
+              <div style={{ fontSize: 10, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.8px", marginTop: 16, marginBottom: 6 }}>Workflow</div>
+              <button onClick={exportWorkflow} style={{ width: "100%", padding: "8px 12px", background: "#f5f5f7", border: "1px solid #ebebee", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: "pointer", color: "#1a1a1a", textAlign: "left", marginBottom: 6 }}>
+                📤 Export Workflow JSON
+              </button>
+
+              <div style={{ fontSize: 10, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.8px", marginTop: 16, marginBottom: 6 }}>Training Data</div>
+              <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 6 }}>{getTrainingDataCount()} records collected</div>
+              <button onClick={() => { exportTrainingData(); addToast("Training data exported!", "success"); }} style={{ width: "100%", padding: "8px 12px", background: "#f5f5f7", border: "1px solid #ebebee", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: "pointer", color: "#1a1a1a", textAlign: "left" }}>
+                📊 Export Training Data (JSONL)
+              </button>
+
               <div style={{ fontSize: 10, color: "#c4c4c8", marginTop: 20 }}>{nodes.length} nodes · {edges.length} connections</div>
+              <div style={{ fontSize: 9, color: "#d1d5db", marginTop: 4 }}>Shortcuts: Space=Run, Del=Delete, ⌘S=Save</div>
             </div>
           ) : (
             <div style={{ padding: "16px 0" }}>
@@ -1424,7 +1518,7 @@ export default function App() {
               { label: "New Video", icon: "▶", defId: "video.text_to_video" },
               { label: "Img2Vid", icon: "🎥", defId: "video.img_to_video" },
               { label: "Upscale", icon: "🔍", defId: "transform.upscale" },
-            ].map((btn) => (
+            ].map((btn: { label: string; icon: string; defId: string }) => (
               <button key={btn.label} onClick={() => {
                 const def = NODE_DEFS.find(d => d.id === btn.defId);
                 if (def) addNodeWithHandler(def);
@@ -1435,6 +1529,15 @@ export default function App() {
                 <span>{btn.icon}</span> {btn.label}
               </button>
             ))}
+            <div style={{ flex: 1 }} />
+            <button onClick={exportWorkflow} title="Export workflow"
+              style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, border: "1px solid #2a2a30", background: "#141416", color: "#9ca3af", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+              📤 Export
+            </button>
+            <button onClick={handleRun} disabled={isRunning || nodes.length === 0} title="Run All (topological order)"
+              style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 8, border: "none", background: isRunning ? "#2a2a30" : "#c026d3", color: isRunning ? "#6b6b75" : "#fff", fontSize: 12, fontWeight: 700, cursor: isRunning ? "not-allowed" : "pointer" }}>
+              {isRunning ? "⏳ Running..." : "▶ Run All"}
+            </button>
           </div>
 
           {currentView === "assets" ? (
@@ -1465,7 +1568,7 @@ export default function App() {
             <div style={{ flex: 1 }}>
               <ReactFlow nodes={nodes} edges={edges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect}
                 nodeTypes={nodeTypes} fitView style={{ background: "#f0f0f2" }}
-                defaultEdgeOptions={{ animated: false, style: { stroke: "#d1d5db", strokeWidth: 1.5 }, type: "smoothstep" }}>
+                defaultEdgeOptions={{ animated: isRunning, style: { stroke: "#d1d5db", strokeWidth: 1.5 }, type: "smoothstep" }}>
                 <Background variant={BackgroundVariant.Dots} color="#c0c0c6" gap={28} size={1.2} />
                 <Controls style={{ background: "#ffffff", border: "1px solid #e8e8eb", borderRadius: 10, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }} />
                 <MiniMap style={{ background: "#ffffff", borderRadius: 10, border: "1px solid #e8e8eb", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }} nodeColor="#d1d5db" maskColor="rgba(240,240,242,0.8)" />
@@ -1474,6 +1577,12 @@ export default function App() {
           )}
         </div>
       )}
+      <ToastContainer />
+      <style>{`
+        @keyframes slideIn { from { transform: translateX(100px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .react-flow__edge.animated path { stroke-dasharray: 5; animation: flowDash 0.5s linear infinite; }
+        @keyframes flowDash { to { stroke-dashoffset: -10; } }
+      `}</style>
     </div>
   );
 }

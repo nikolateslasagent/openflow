@@ -22,6 +22,17 @@ export function saveTrainingRecord(record: TrainingRecord) {
   }
 }
 
+export function getTrainingRecords(): TrainingRecord[] {
+  try {
+    const data = localStorage.getItem(STORAGE_KEY) || "";
+    return data.split("\n").filter(l => l.trim()).map(l => JSON.parse(l)).reverse();
+  } catch { return []; }
+}
+
+export function clearTrainingData() {
+  localStorage.removeItem(STORAGE_KEY);
+}
+
 export function getTrainingDataCount(): number {
   try {
     const data = localStorage.getItem(STORAGE_KEY) || "";

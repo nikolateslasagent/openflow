@@ -24,7 +24,7 @@ import {
 import "@xyflow/react/dist/style.css";
 import { ModelManagerPanel } from "./ModelManager";
 import { WorkflowTemplatesPanel } from "./WorkflowTemplates";
-import { saveTrainingRecord, getTrainingDataCount, exportTrainingData } from "./TrainingData";
+import { saveTrainingRecord, getTrainingDataCount, exportTrainingData, getTrainingRecords, clearTrainingData } from "./TrainingData";
 import { useToast } from "./Toast";
 
 // ---------------------------------------------------------------------------
@@ -254,6 +254,85 @@ const NODE_DEFS: NodeDef[] = [
       { name: "image", type: "image", description: "Merged image" },
     ],
   },
+  // Sprint 4: Advanced Tool Nodes
+  {
+    id: "tools.prompt_enhancer",
+    name: "Prompt Enhancer",
+    description: "Expand a basic prompt into a detailed one using AI",
+    category: "tools",
+    icon: "✨",
+    color: "#a855f7",
+    inputs: [
+      { name: "prompt", type: "string", description: "Basic prompt", required: true },
+      { name: "style", type: "string", description: "Style hint", default: "photorealistic", options: ["photorealistic", "cinematic", "anime", "oil painting", "watercolor", "3d render", "pixel art", "sketch"] },
+    ],
+    outputs: [
+      { name: "text", type: "string", description: "Enhanced prompt" },
+    ],
+  },
+  {
+    id: "tools.bg_remover",
+    name: "Background Remover",
+    description: "Remove background from an image",
+    category: "tools",
+    icon: "🪄",
+    color: "#a855f7",
+    inputs: [
+      { name: "image_url", type: "string", description: "Image URL", required: true },
+    ],
+    outputs: [
+      { name: "image", type: "image", description: "Image with background removed" },
+    ],
+  },
+  {
+    id: "tools.face_swap",
+    name: "Face Swap",
+    description: "Swap faces between images (coming soon)",
+    category: "tools",
+    icon: "🎭",
+    color: "#a855f7",
+    inputs: [
+      { name: "source_url", type: "string", description: "Source face image URL", required: true },
+      { name: "target_url", type: "string", description: "Target image URL", required: true },
+    ],
+    outputs: [
+      { name: "image", type: "image", description: "Face-swapped image" },
+    ],
+  },
+  {
+    id: "tools.inpainting",
+    name: "Inpainting (AI Mask)",
+    description: "Edit image regions using text mask description",
+    category: "tools",
+    icon: "🖌️",
+    color: "#a855f7",
+    inputs: [
+      { name: "image_url", type: "string", description: "Image URL", required: true },
+      { name: "mask_prompt", type: "string", description: "What to mask (e.g. 'the sky')", required: true },
+      { name: "prompt", type: "string", description: "What to replace with", required: true },
+      { name: "model", type: "string", description: "Model", default: "flux-pro", options: ["flux-pro", "sd-3.5"] },
+    ],
+    outputs: [
+      { name: "image", type: "image", description: "Edited image" },
+    ],
+  },
+  {
+    id: "tools.controlnet",
+    name: "ControlNet",
+    description: "Guided generation with control image",
+    category: "tools",
+    icon: "🎯",
+    color: "#a855f7",
+    inputs: [
+      { name: "image_url", type: "string", description: "Control image URL", required: true },
+      { name: "prompt", type: "string", description: "Generation prompt", required: true },
+      { name: "control_type", type: "string", description: "Control type", default: "canny", options: ["canny", "depth", "pose"] },
+      { name: "model", type: "string", description: "Model", default: "flux-pro", options: ["flux-pro", "sd-3.5"] },
+    ],
+    outputs: [
+      { name: "image", type: "image", description: "Generated image" },
+    ],
+  },
 ];
 
 const CATEGORIES: Record<string, string> = {
@@ -263,6 +342,7 @@ const CATEGORIES: Record<string, string> = {
   text: "Text / LLM",
   transform: "Transform",
   output: "Output",
+  tools: "Tools",
 };
 
 // SVG outlined icons for toolbar and nodes
@@ -273,6 +353,7 @@ const SVG_ICONS: Record<string, string> = {
   text: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`,
   transform: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>`,
   output: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="21.17" y1="8" x2="12" y2="8"/><line x1="3.95" y1="6.06" x2="8.54" y2="14"/><line x1="10.88" y1="21.94" x2="15.46" y2="14"/></svg>`,
+  tools: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>`,
   settings: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
   run: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>`,
   scenes: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2"/><line x1="2" y1="8" x2="22" y2="8"/><line x1="8" y1="2" x2="8" y2="22"/></svg>`,
@@ -294,6 +375,11 @@ const NODE_ICONS: Record<string, string> = {
   "video.img_to_video": `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><polygon points="10 9 15 12 10 15 10 9"/></svg>`,
   "audio.placeholder": `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>`,
   "transform.merge": `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="9" height="9" rx="1"/><rect x="13" y="2" width="9" height="9" rx="1"/><rect x="2" y="13" width="20" height="9" rx="1"/></svg>`,
+  "tools.prompt_enhancer": `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
+  "tools.bg_remover": `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`,
+  "tools.face_swap": `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>`,
+  "tools.inpainting": `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/></svg>`,
+  "tools.controlnet": `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="21.17" y1="8" x2="12" y2="8"/><line x1="3.95" y1="6.06" x2="8.54" y2="14"/><line x1="10.88" y1="21.94" x2="15.46" y2="14"/></svg>`,
 };
 
 function groupByCategory(defs: NodeDef[]) {
@@ -691,7 +777,7 @@ function Dashboard({ onNewProject, onOpenCanvas, onLoadTemplate, assets }: {
         </div>
 
         {/* Quick Actions */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 40 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 40 }}>
           {[
             { label: "New Project", icon: "◎", desc: "Start with a blank canvas", color: "#c026d3", action: onNewProject },
             { label: "Scene Builder", icon: "🎬", desc: "Build scenes from a story", color: "#6366f1", action: onOpenCanvas },
@@ -714,7 +800,7 @@ function Dashboard({ onNewProject, onOpenCanvas, onLoadTemplate, assets }: {
         {/* Mini-Apps / Templates */}
         <div style={{ marginBottom: 40 }}>
           <h2 style={{ fontSize: 18, fontWeight: 600, color: "#1a1a1a", marginBottom: 16, letterSpacing: "-0.3px" }}>Templates & Mini-Apps</h2>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14 }}>
             {MINI_APPS.map((app) => (
               <button key={app.name} onClick={() => onLoadTemplate(app)} style={{
                 padding: "20px", background: "#ffffff", border: "1px solid #e8e8eb", borderRadius: 14,
@@ -733,7 +819,7 @@ function Dashboard({ onNewProject, onOpenCanvas, onLoadTemplate, assets }: {
         {/* Usage Stats */}
         <div style={{ marginBottom: 40 }}>
           <h2 style={{ fontSize: 18, fontWeight: 600, color: "#1a1a1a", marginBottom: 16 }}>Usage</h2>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 14 }}>
             {[
               { label: "Images Generated", value: assets.filter(a => a.type === "image").length, icon: "🖼️" },
               { label: "Videos Generated", value: assets.filter(a => a.type === "video").length, icon: "🎬" },
@@ -931,6 +1017,63 @@ function ChatPanel() {
 }
 
 // ---------------------------------------------------------------------------
+// Generation History Panel
+// ---------------------------------------------------------------------------
+
+function HistoryPanel({ onRerun }: { onRerun: (record: { model: string; prompt: string; params: Record<string, unknown> }) => void }) {
+  const [records, setRecords] = useState(() => getTrainingRecords());
+  const [selectedRecord, setSelectedRecord] = useState<null | typeof records[0]>(null);
+
+  const refresh = () => setRecords(getTrainingRecords());
+
+  return (
+    <div style={{ padding: 20, display: "flex", flexDirection: "column", height: "100%" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: "#1a1a1a" }}>🕐 Generation History</div>
+        <div style={{ display: "flex", gap: 4 }}>
+          <button onClick={refresh} style={{ padding: "4px 8px", background: "#f5f5f7", border: "none", borderRadius: 6, fontSize: 10, cursor: "pointer", color: "#6b7280" }}>↻</button>
+          <button onClick={() => { clearTrainingData(); refresh(); }} style={{ padding: "4px 8px", background: "#fef2f2", border: "none", borderRadius: 6, fontSize: 10, cursor: "pointer", color: "#ef4444" }}>Clear</button>
+        </div>
+      </div>
+      {records.length === 0 && <div style={{ fontSize: 11, color: "#9ca3af", textAlign: "center", padding: 20 }}>No generations yet</div>}
+      <div style={{ flex: 1, overflow: "auto" }}>
+        {selectedRecord ? (
+          <div>
+            <button onClick={() => setSelectedRecord(null)} style={{ padding: "4px 8px", background: "#f5f5f7", border: "none", borderRadius: 6, fontSize: 10, cursor: "pointer", color: "#6b7280", marginBottom: 12 }}>← Back</button>
+            {selectedRecord.output_url && (
+              selectedRecord.output_url.includes("video") ? 
+                <video src={selectedRecord.output_url} controls style={{ width: "100%", borderRadius: 10, marginBottom: 12 }} /> :
+                <img src={selectedRecord.output_url} alt="" style={{ width: "100%", borderRadius: 10, marginBottom: 12 }} />
+            )}
+            <div style={{ fontSize: 12, fontWeight: 600, color: "#1a1a1a", marginBottom: 4 }}>{selectedRecord.model}</div>
+            <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 8, lineHeight: 1.5 }}>{selectedRecord.prompt}</div>
+            <div style={{ fontSize: 10, color: "#9ca3af", marginBottom: 4 }}>⏱ {(selectedRecord.generation_time_ms / 1000).toFixed(1)}s</div>
+            <div style={{ fontSize: 10, color: "#9ca3af", marginBottom: 12 }}>📅 {new Date(selectedRecord.timestamp).toLocaleString()}</div>
+            <button onClick={() => { onRerun({ model: selectedRecord.model, prompt: selectedRecord.prompt, params: selectedRecord.params }); }}
+              style={{ width: "100%", padding: "10px", background: "#c026d3", color: "#fff", border: "none", borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+              Re-run ✦
+            </button>
+          </div>
+        ) : (
+          records.map((r, i) => (
+            <div key={i} onClick={() => setSelectedRecord(r)}
+              style={{ display: "flex", gap: 8, padding: "8px 6px", cursor: "pointer", borderRadius: 8, marginBottom: 2, transition: "background 0.12s" }}
+              onMouseOver={(e) => { e.currentTarget.style.background = "#f5f5f7"; }}
+              onMouseOut={(e) => { e.currentTarget.style.background = "transparent"; }}>
+              {r.output_url && <img src={r.output_url} alt="" style={{ width: 40, height: 40, borderRadius: 6, objectFit: "cover", flexShrink: 0 }} onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 10, fontWeight: 600, color: "#1a1a1a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.prompt?.slice(0, 50) || "No prompt"}</div>
+                <div style={{ fontSize: 9, color: "#9ca3af" }}>{r.model} · {(r.generation_time_ms / 1000).toFixed(1)}s · {new Date(r.timestamp).toLocaleTimeString()}</div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Main App
 // ---------------------------------------------------------------------------
 
@@ -1089,6 +1232,25 @@ export default function App() {
         e.preventDefault();
         saveProject();
         addToast("Project saved!", "success");
+      }
+      if (e.key === "d" && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        const selected = nodes.filter(n => n.selected);
+        if (selected.length) {
+          selected.forEach(n => {
+            const def = n.data.def as NodeDef;
+            const vals = n.data.values as Record<string, unknown>;
+            idCounter.current += 1;
+            const nodeId = `${def.id}_${idCounter.current}`;
+            const newNode: Node = {
+              id: nodeId, type: "flowNode",
+              position: { x: n.position.x + 40, y: n.position.y + 40 },
+              data: { def, values: { ...vals }, onChange: (key: string, val: unknown) => updateNodeValue(nodeId, key, val), onRun: () => runSingleNodeRef.current(nodeId), onDelete: () => setNodes((nds: Node[]) => nds.filter((nd: Node) => nd.id !== nodeId)) },
+            };
+            setNodes((nds) => [...nds, newNode]);
+          });
+          addToast(`Duplicated ${selected.length} node(s)`, "success");
+        }
       }
     };
     window.addEventListener("keydown", handler);
@@ -1339,6 +1501,12 @@ export default function App() {
           style={{ width: 38, height: 38, borderRadius: 10, border: "none", background: activePanel === "chat" ? "#1e1e22" : "transparent", color: activePanel === "chat" ? "#c026d3" : "#6b6b75", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }}
           dangerouslySetInnerHTML={{ __html: SVG_ICONS.chat }} />
 
+        {/* History */}
+        <button title="Generation History" onClick={() => { setActivePanel(activePanel === "history" ? null : "history"); }}
+          style={{ width: 38, height: 38, borderRadius: 10, border: "none", background: activePanel === "history" ? "#1e1e22" : "transparent", color: activePanel === "history" ? "#c026d3" : "#6b6b75", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </button>
+
         {/* Scene Builder */}
         <button title="Scene Builder" onClick={() => { setCurrentView("canvas"); setActivePanel(activePanel === "scenes" ? null : "scenes"); }}
           style={{ width: 38, height: 38, borderRadius: 10, border: "none", background: activePanel === "scenes" ? "#1e1e22" : "transparent", color: activePanel === "scenes" ? "#c026d3" : "#6b6b75", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }}>
@@ -1427,32 +1595,70 @@ export default function App() {
                 </div>
               )}
             </div>
+          ) : activePanel === "history" ? (
+            <HistoryPanel onRerun={(record) => {
+              const def = NODE_DEFS.find(d => d.id === "image.text_to_image");
+              if (def) { addNodeWithHandler(def, { model: record.model, prompt: record.prompt, ...record.params }); setActivePanel(null); setCurrentView("canvas"); }
+            }} />
           ) : activePanel === "settings" ? (
-            <div style={{ padding: 20 }}>
+            <div style={{ padding: 20, overflow: "auto" }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: "#1a1a1a", marginBottom: 16 }}>Settings</div>
-              <div style={{ fontSize: 10, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 6 }}>fal.ai API Key</div>
-              <input type="password" value={falApiKey} onChange={(e) => setFalApiKey(e.target.value)} onKeyDown={stopKeys}
-                placeholder="fal-xxxxxxxx" style={{ width: "100%", background: "#f5f5f7", border: "none", borderRadius: 8, color: "#1a1a1a", fontSize: 12, padding: "8px 12px", outline: "none", boxSizing: "border-box" }} />
-              <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 6 }}>Free at <a href="https://fal.ai/dashboard/keys" target="_blank" rel="noopener" style={{ color: "#1a1a1a", fontWeight: 600, textDecoration: "none" }}>fal.ai</a></div>
 
-              <div style={{ fontSize: 10, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.8px", marginTop: 20, marginBottom: 6 }}>Appearance</div>
-              <button onClick={() => setDarkMode(!darkMode)} style={{ width: "100%", padding: "8px 12px", background: "#f5f5f7", border: "1px solid #ebebee", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: "pointer", color: "#1a1a1a", textAlign: "left" }}>
+              <div style={{ fontSize: 10, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 6 }}>API Keys</div>
+              <div style={{ fontSize: 10, color: "#6b7280", marginBottom: 4 }}>fal.ai (required)</div>
+              <input type="password" value={falApiKey} onChange={(e) => { setFalApiKey(e.target.value); localStorage.setItem("openflow_fal_key", e.target.value); }} onKeyDown={stopKeys}
+                placeholder="fal-xxxxxxxx" style={{ width: "100%", background: "#f5f5f7", border: "none", borderRadius: 8, color: "#1a1a1a", fontSize: 12, padding: "8px 12px", outline: "none", boxSizing: "border-box", marginBottom: 6 }} />
+              <div style={{ fontSize: 10, color: "#6b7280", marginBottom: 4 }}>OpenAI (optional)</div>
+              <input type="password" value={localStorage.getItem("openflow_openai_key") || ""} onChange={(e) => localStorage.setItem("openflow_openai_key", e.target.value)} onKeyDown={stopKeys}
+                placeholder="sk-..." style={{ width: "100%", background: "#f5f5f7", border: "none", borderRadius: 8, color: "#1a1a1a", fontSize: 12, padding: "8px 12px", outline: "none", boxSizing: "border-box", marginBottom: 6 }} />
+              <div style={{ fontSize: 10, color: "#6b7280", marginBottom: 4 }}>Replicate (optional)</div>
+              <input type="password" value={localStorage.getItem("openflow_replicate_key") || ""} onChange={(e) => localStorage.setItem("openflow_replicate_key", e.target.value)} onKeyDown={stopKeys}
+                placeholder="r8_..." style={{ width: "100%", background: "#f5f5f7", border: "none", borderRadius: 8, color: "#1a1a1a", fontSize: 12, padding: "8px 12px", outline: "none", boxSizing: "border-box" }} />
+              <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 6, marginBottom: 16 }}>Get keys at <a href="https://fal.ai/dashboard/keys" target="_blank" rel="noopener" style={{ color: "#1a1a1a", fontWeight: 600, textDecoration: "none" }}>fal.ai</a></div>
+
+              <div style={{ fontSize: 10, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 6 }}>Generation Defaults</div>
+              <div style={{ fontSize: 10, color: "#6b7280", marginBottom: 4 }}>Default image size</div>
+              <select value={localStorage.getItem("openflow_default_size") || "1024"} onChange={(e) => localStorage.setItem("openflow_default_size", e.target.value)}
+                style={{ width: "100%", background: "#f5f5f7", border: "none", borderRadius: 8, fontSize: 12, padding: "8px 12px", outline: "none", cursor: "pointer", marginBottom: 6, boxSizing: "border-box" }}>
+                <option value="512">512×512</option><option value="768">768×768</option><option value="1024">1024×1024</option><option value="1280">1280×1280</option>
+              </select>
+              <div style={{ fontSize: 10, color: "#6b7280", marginBottom: 4 }}>Default model</div>
+              <select value={localStorage.getItem("openflow_default_model") || "flux-2-pro"} onChange={(e) => localStorage.setItem("openflow_default_model", e.target.value)}
+                style={{ width: "100%", background: "#f5f5f7", border: "none", borderRadius: 8, fontSize: 12, padding: "8px 12px", outline: "none", cursor: "pointer", marginBottom: 6, boxSizing: "border-box" }}>
+                <option value="flux-fast">flux-fast (Fast)</option><option value="flux-2-pro">flux-2-pro (Balanced)</option><option value="flux-pro-1.1-ultra">flux-pro-1.1-ultra (Quality)</option>
+              </select>
+              <div style={{ fontSize: 10, color: "#6b7280", marginBottom: 4 }}>Quality preset</div>
+              <div style={{ display: "flex", gap: 4, marginBottom: 16 }}>
+                {["fast", "balanced", "quality"].map(p => (
+                  <button key={p} onClick={() => localStorage.setItem("openflow_quality_preset", p)}
+                    style={{ flex: 1, padding: "6px", background: (localStorage.getItem("openflow_quality_preset") || "balanced") === p ? "#c026d3" : "#f5f5f7", color: (localStorage.getItem("openflow_quality_preset") || "balanced") === p ? "#fff" : "#6b7280", border: "none", borderRadius: 6, fontSize: 10, fontWeight: 600, cursor: "pointer", textTransform: "capitalize" }}>{p}</button>
+                ))}
+              </div>
+
+              <div style={{ fontSize: 10, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 6 }}>Appearance</div>
+              <button onClick={() => setDarkMode(!darkMode)} style={{ width: "100%", padding: "8px 12px", background: "#f5f5f7", border: "1px solid #ebebee", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: "pointer", color: "#1a1a1a", textAlign: "left", marginBottom: 12 }}>
                 {darkMode ? "🌙 Dark Mode ON" : "☀️ Light Mode"}
               </button>
 
-              <div style={{ fontSize: 10, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.8px", marginTop: 16, marginBottom: 6 }}>Workflow</div>
+              <div style={{ fontSize: 10, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 6 }}>Workflow</div>
               <button onClick={exportWorkflow} style={{ width: "100%", padding: "8px 12px", background: "#f5f5f7", border: "1px solid #ebebee", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: "pointer", color: "#1a1a1a", textAlign: "left", marginBottom: 6 }}>
                 📤 Export Workflow JSON
               </button>
 
-              <div style={{ fontSize: 10, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.8px", marginTop: 16, marginBottom: 6 }}>Training Data</div>
+              <div style={{ fontSize: 10, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.8px", marginTop: 12, marginBottom: 6 }}>Training Data</div>
               <div style={{ fontSize: 11, color: "#6b7280", marginBottom: 6 }}>{getTrainingDataCount()} records collected</div>
               <button onClick={() => { exportTrainingData(); addToast("Training data exported!", "success"); }} style={{ width: "100%", padding: "8px 12px", background: "#f5f5f7", border: "1px solid #ebebee", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: "pointer", color: "#1a1a1a", textAlign: "left" }}>
                 📊 Export Training Data (JSONL)
               </button>
 
-              <div style={{ fontSize: 10, color: "#c4c4c8", marginTop: 20 }}>{nodes.length} nodes · {edges.length} connections</div>
-              <div style={{ fontSize: 9, color: "#d1d5db", marginTop: 4 }}>Shortcuts: Space=Run, Del=Delete, ⌘S=Save</div>
+              <div style={{ fontSize: 10, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.8px", marginTop: 16, marginBottom: 6 }}>About</div>
+              <div style={{ fontSize: 11, color: "#6b7280", lineHeight: 1.8 }}>
+                OpenFlow v4.0 — Sprint 4<br />
+                <a href="https://github.com/nikolateslasagent/openflow" target="_blank" rel="noopener" style={{ color: "#c026d3", textDecoration: "none" }}>GitHub</a> · <a href="https://openflow-docs.vercel.app" target="_blank" rel="noopener" style={{ color: "#c026d3", textDecoration: "none" }}>Docs</a>
+              </div>
+
+              <div style={{ fontSize: 10, color: "#c4c4c8", marginTop: 16 }}>{nodes.length} nodes · {edges.length} connections</div>
+              <div style={{ fontSize: 9, color: "#d1d5db", marginTop: 4 }}>Shortcuts: Space=Run, Del=Delete, ⌘S=Save, ⌘D=Duplicate</div>
             </div>
           ) : (
             <div style={{ padding: "16px 0" }}>
@@ -1530,6 +1736,20 @@ export default function App() {
               </button>
             ))}
             <div style={{ flex: 1 }} />
+            {nodes.filter(n => n.selected).length > 1 && (
+              <>
+                <span style={{ fontSize: 11, color: "#9ca3af" }}>{nodes.filter(n => n.selected).length} selected</span>
+                <button onClick={() => {
+                  const selected = nodes.filter(n => n.selected);
+                  (async () => {
+                    for (const n of selected) { await runSingleNode(n.id); }
+                    addToast(`Ran ${selected.length} nodes`, "success");
+                  })();
+                }} style={{ padding: "8px 14px", borderRadius: 8, border: "1px solid #2a2a30", background: "#141416", color: "#22c55e", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>▶ Run Selected</button>
+                <button onClick={() => { setNodes(nds => nds.filter(n => !n.selected)); addToast("Deleted selected", "success"); }}
+                  style={{ padding: "8px 14px", borderRadius: 8, border: "1px solid #2a2a30", background: "#141416", color: "#ef4444", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>🗑 Delete</button>
+              </>
+            )}
             <button onClick={exportWorkflow} title="Export workflow"
               style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, border: "1px solid #2a2a30", background: "#141416", color: "#9ca3af", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
               📤 Export
@@ -1582,6 +1802,15 @@ export default function App() {
         @keyframes slideIn { from { transform: translateX(100px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         .react-flow__edge.animated path { stroke-dasharray: 5; animation: flowDash 0.5s linear infinite; }
         @keyframes flowDash { to { stroke-dashoffset: -10; } }
+        @media (max-width: 768px) {
+          nav { width: 44px !important; }
+          nav button { width: 32px !important; height: 32px !important; }
+          aside { position: fixed !important; left: 44px !important; top: 0 !important; bottom: 0 !important; width: calc(100vw - 44px) !important; z-index: 100 !important; }
+          .react-flow__node { touch-action: none; }
+        }
+        @media (max-width: 640px) {
+          nav span, nav div:first-child { font-size: 10px !important; }
+        }
       `}</style>
     </div>
   );

@@ -7,6 +7,10 @@ import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-run
 import { useCallback, useMemo, useState, useRef, useEffect } from "react";
 import { ReactFlow, Background, Controls, MiniMap, addEdge, useNodesState, useEdgesState, Handle, Position, BackgroundVariant, } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import { ModelManagerPanel } from "./ModelManager";
+import { WorkflowTemplatesPanel } from "./WorkflowTemplates";
+import { saveTrainingRecord, getTrainingDataCount, exportTrainingData, getTrainingRecords, clearTrainingData } from "./TrainingData";
+import { useToast } from "./Toast";
 // ---------------------------------------------------------------------------
 // Node definitions with real parameters
 // ---------------------------------------------------------------------------
@@ -195,6 +199,85 @@ const NODE_DEFS = [
             { name: "image", type: "image", description: "Merged image" },
         ],
     },
+    // Sprint 4: Advanced Tool Nodes
+    {
+        id: "tools.prompt_enhancer",
+        name: "Prompt Enhancer",
+        description: "Expand a basic prompt into a detailed one using AI",
+        category: "tools",
+        icon: "✨",
+        color: "#a855f7",
+        inputs: [
+            { name: "prompt", type: "string", description: "Basic prompt", required: true },
+            { name: "style", type: "string", description: "Style hint", default: "photorealistic", options: ["photorealistic", "cinematic", "anime", "oil painting", "watercolor", "3d render", "pixel art", "sketch"] },
+        ],
+        outputs: [
+            { name: "text", type: "string", description: "Enhanced prompt" },
+        ],
+    },
+    {
+        id: "tools.bg_remover",
+        name: "Background Remover",
+        description: "Remove background from an image",
+        category: "tools",
+        icon: "🪄",
+        color: "#a855f7",
+        inputs: [
+            { name: "image_url", type: "string", description: "Image URL", required: true },
+        ],
+        outputs: [
+            { name: "image", type: "image", description: "Image with background removed" },
+        ],
+    },
+    {
+        id: "tools.face_swap",
+        name: "Face Swap",
+        description: "Swap faces between images (coming soon)",
+        category: "tools",
+        icon: "🎭",
+        color: "#a855f7",
+        inputs: [
+            { name: "source_url", type: "string", description: "Source face image URL", required: true },
+            { name: "target_url", type: "string", description: "Target image URL", required: true },
+        ],
+        outputs: [
+            { name: "image", type: "image", description: "Face-swapped image" },
+        ],
+    },
+    {
+        id: "tools.inpainting",
+        name: "Inpainting (AI Mask)",
+        description: "Edit image regions using text mask description",
+        category: "tools",
+        icon: "🖌️",
+        color: "#a855f7",
+        inputs: [
+            { name: "image_url", type: "string", description: "Image URL", required: true },
+            { name: "mask_prompt", type: "string", description: "What to mask (e.g. 'the sky')", required: true },
+            { name: "prompt", type: "string", description: "What to replace with", required: true },
+            { name: "model", type: "string", description: "Model", default: "flux-pro", options: ["flux-pro", "sd-3.5"] },
+        ],
+        outputs: [
+            { name: "image", type: "image", description: "Edited image" },
+        ],
+    },
+    {
+        id: "tools.controlnet",
+        name: "ControlNet",
+        description: "Guided generation with control image",
+        category: "tools",
+        icon: "🎯",
+        color: "#a855f7",
+        inputs: [
+            { name: "image_url", type: "string", description: "Control image URL", required: true },
+            { name: "prompt", type: "string", description: "Generation prompt", required: true },
+            { name: "control_type", type: "string", description: "Control type", default: "canny", options: ["canny", "depth", "pose"] },
+            { name: "model", type: "string", description: "Model", default: "flux-pro", options: ["flux-pro", "sd-3.5"] },
+        ],
+        outputs: [
+            { name: "image", type: "image", description: "Generated image" },
+        ],
+    },
 ];
 const CATEGORIES = {
     input: "Inputs",
@@ -203,6 +286,7 @@ const CATEGORIES = {
     text: "Text / LLM",
     transform: "Transform",
     output: "Output",
+    tools: "Tools",
 };
 // SVG outlined icons for toolbar and nodes
 const SVG_ICONS = {
@@ -212,6 +296,7 @@ const SVG_ICONS = {
     text: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`,
     transform: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>`,
     output: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="21.17" y1="8" x2="12" y2="8"/><line x1="3.95" y1="6.06" x2="8.54" y2="14"/><line x1="10.88" y1="21.94" x2="15.46" y2="14"/></svg>`,
+    tools: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>`,
     settings: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
     run: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>`,
     scenes: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2"/><line x1="2" y1="8" x2="22" y2="8"/><line x1="8" y1="2" x2="8" y2="22"/></svg>`,
@@ -232,6 +317,11 @@ const NODE_ICONS = {
     "video.img_to_video": `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><polygon points="10 9 15 12 10 15 10 9"/></svg>`,
     "audio.placeholder": `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>`,
     "transform.merge": `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="9" height="9" rx="1"/><rect x="13" y="2" width="9" height="9" rx="1"/><rect x="2" y="13" width="20" height="9" rx="1"/></svg>`,
+    "tools.prompt_enhancer": `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
+    "tools.bg_remover": `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`,
+    "tools.face_swap": `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>`,
+    "tools.inpainting": `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/></svg>`,
+    "tools.controlnet": `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="21.17" y1="8" x2="12" y2="8"/><line x1="3.95" y1="6.06" x2="8.54" y2="14"/><line x1="10.88" y1="21.94" x2="15.46" y2="14"/></svg>`,
 };
 function groupByCategory(defs) {
     const g = {};
@@ -461,7 +551,7 @@ const MINI_APPS = [
 // Dashboard Component
 // ---------------------------------------------------------------------------
 function Dashboard({ onNewProject, onOpenCanvas, onLoadTemplate, assets }) {
-    return (_jsx("div", { style: { flex: 1, background: "#f0f0f2", overflow: "auto", fontFamily: "'Inter', -apple-system, sans-serif" }, children: _jsxs("div", { style: { maxWidth: 1200, margin: "0 auto", padding: "40px 48px" }, children: [_jsxs("div", { style: { marginBottom: 40 }, children: [_jsx("h1", { style: { fontSize: 28, fontWeight: 700, color: "#1a1a1a", margin: "0 0 8px", letterSpacing: "-0.5px" }, children: "Welcome back \u2726" }), _jsx("p", { style: { fontSize: 14, color: "#9ca3af", margin: 0 }, children: "Create, generate, and manage your AI workflows" })] }), _jsx("div", { style: { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 40 }, children: [
+    return (_jsx("div", { style: { flex: 1, background: "#f0f0f2", overflow: "auto", fontFamily: "'Inter', -apple-system, sans-serif" }, children: _jsxs("div", { style: { maxWidth: 1200, margin: "0 auto", padding: "40px 48px" }, children: [_jsxs("div", { style: { marginBottom: 40 }, children: [_jsx("h1", { style: { fontSize: 28, fontWeight: 700, color: "#1a1a1a", margin: "0 0 8px", letterSpacing: "-0.5px" }, children: "Welcome back \u2726" }), _jsx("p", { style: { fontSize: 14, color: "#9ca3af", margin: 0 }, children: "Create, generate, and manage your AI workflows" })] }), _jsx("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 40 }, children: [
                         { label: "New Project", icon: "◎", desc: "Start with a blank canvas", color: "#c026d3", action: onNewProject },
                         { label: "Scene Builder", icon: "🎬", desc: "Build scenes from a story", color: "#6366f1", action: onOpenCanvas },
                         { label: "Browse Models", icon: "◫", desc: "18 image + 14 video models", color: "#14b8a6", action: onOpenCanvas },
@@ -469,10 +559,10 @@ function Dashboard({ onNewProject, onOpenCanvas, onLoadTemplate, assets }) {
                             padding: "24px", background: "#ffffff", border: "1px solid #e8e8eb", borderRadius: 16,
                             cursor: "pointer", textAlign: "left", transition: "all 0.15s",
                             boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
-                        }, onMouseOver: (e) => { e.currentTarget.style.borderColor = item.color; e.currentTarget.style.boxShadow = `0 4px 16px ${item.color}20`; }, onMouseOut: (e) => { e.currentTarget.style.borderColor = "#e8e8eb"; e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.03)"; }, children: [_jsx("div", { style: { fontSize: 28, marginBottom: 12 }, children: item.icon }), _jsx("div", { style: { fontSize: 15, fontWeight: 600, color: "#1a1a1a", marginBottom: 4 }, children: item.label }), _jsx("div", { style: { fontSize: 12, color: "#9ca3af" }, children: item.desc })] }, item.label))) }), _jsxs("div", { style: { marginBottom: 40 }, children: [_jsx("h2", { style: { fontSize: 18, fontWeight: 600, color: "#1a1a1a", marginBottom: 16, letterSpacing: "-0.3px" }, children: "Templates & Mini-Apps" }), _jsx("div", { style: { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14 }, children: MINI_APPS.map((app) => (_jsxs("button", { onClick: () => onLoadTemplate(app), style: {
+                        }, onMouseOver: (e) => { e.currentTarget.style.borderColor = item.color; e.currentTarget.style.boxShadow = `0 4px 16px ${item.color}20`; }, onMouseOut: (e) => { e.currentTarget.style.borderColor = "#e8e8eb"; e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.03)"; }, children: [_jsx("div", { style: { fontSize: 28, marginBottom: 12 }, children: item.icon }), _jsx("div", { style: { fontSize: 15, fontWeight: 600, color: "#1a1a1a", marginBottom: 4 }, children: item.label }), _jsx("div", { style: { fontSize: 12, color: "#9ca3af" }, children: item.desc })] }, item.label))) }), _jsxs("div", { style: { marginBottom: 40 }, children: [_jsx("h2", { style: { fontSize: 18, fontWeight: 600, color: "#1a1a1a", marginBottom: 16, letterSpacing: "-0.3px" }, children: "Templates & Mini-Apps" }), _jsx("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14 }, children: MINI_APPS.map((app) => (_jsxs("button", { onClick: () => onLoadTemplate(app), style: {
                                     padding: "20px", background: "#ffffff", border: "1px solid #e8e8eb", borderRadius: 14,
                                     cursor: "pointer", textAlign: "left", transition: "all 0.15s",
-                                }, onMouseOver: (e) => { e.currentTarget.style.borderColor = app.color; }, onMouseOut: (e) => { e.currentTarget.style.borderColor = "#e8e8eb"; }, children: [_jsx("div", { style: { fontSize: 24, marginBottom: 10 }, children: app.icon }), _jsx("div", { style: { fontSize: 13, fontWeight: 600, color: "#1a1a1a", marginBottom: 4 }, children: app.name }), _jsx("div", { style: { fontSize: 11, color: "#9ca3af", lineHeight: 1.4 }, children: app.description })] }, app.name))) })] }), _jsxs("div", { style: { marginBottom: 40 }, children: [_jsx("h2", { style: { fontSize: 18, fontWeight: 600, color: "#1a1a1a", marginBottom: 16 }, children: "Usage" }), _jsx("div", { style: { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14 }, children: [
+                                }, onMouseOver: (e) => { e.currentTarget.style.borderColor = app.color; }, onMouseOut: (e) => { e.currentTarget.style.borderColor = "#e8e8eb"; }, children: [_jsx("div", { style: { fontSize: 24, marginBottom: 10 }, children: app.icon }), _jsx("div", { style: { fontSize: 13, fontWeight: 600, color: "#1a1a1a", marginBottom: 4 }, children: app.name }), _jsx("div", { style: { fontSize: 11, color: "#9ca3af", lineHeight: 1.4 }, children: app.description })] }, app.name))) })] }), _jsxs("div", { style: { marginBottom: 40 }, children: [_jsx("h2", { style: { fontSize: 18, fontWeight: 600, color: "#1a1a1a", marginBottom: 16 }, children: "Usage" }), _jsx("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 14 }, children: [
                                 { label: "Images Generated", value: assets.filter(a => a.type === "image").length, icon: "🖼️" },
                                 { label: "Videos Generated", value: assets.filter(a => a.type === "video").length, icon: "🎬" },
                                 { label: "Total Assets", value: assets.length, icon: "📦" },
@@ -556,6 +646,17 @@ function ChatPanel() {
                         }, children: "Send" })] })] }));
 }
 // ---------------------------------------------------------------------------
+// Generation History Panel
+// ---------------------------------------------------------------------------
+function HistoryPanel({ onRerun }) {
+    const [records, setRecords] = useState(() => getTrainingRecords());
+    const [selectedRecord, setSelectedRecord] = useState(null);
+    const refresh = () => setRecords(getTrainingRecords());
+    return (_jsxs("div", { style: { padding: 20, display: "flex", flexDirection: "column", height: "100%" }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }, children: [_jsx("div", { style: { fontSize: 13, fontWeight: 600, color: "#1a1a1a" }, children: "\uD83D\uDD50 Generation History" }), _jsxs("div", { style: { display: "flex", gap: 4 }, children: [_jsx("button", { onClick: refresh, style: { padding: "4px 8px", background: "#f5f5f7", border: "none", borderRadius: 6, fontSize: 10, cursor: "pointer", color: "#6b7280" }, children: "\u21BB" }), _jsx("button", { onClick: () => { clearTrainingData(); refresh(); }, style: { padding: "4px 8px", background: "#fef2f2", border: "none", borderRadius: 6, fontSize: 10, cursor: "pointer", color: "#ef4444" }, children: "Clear" })] })] }), records.length === 0 && _jsx("div", { style: { fontSize: 11, color: "#9ca3af", textAlign: "center", padding: 20 }, children: "No generations yet" }), _jsx("div", { style: { flex: 1, overflow: "auto" }, children: selectedRecord ? (_jsxs("div", { children: [_jsx("button", { onClick: () => setSelectedRecord(null), style: { padding: "4px 8px", background: "#f5f5f7", border: "none", borderRadius: 6, fontSize: 10, cursor: "pointer", color: "#6b7280", marginBottom: 12 }, children: "\u2190 Back" }), selectedRecord.output_url && (selectedRecord.output_url.includes("video") ?
+                            _jsx("video", { src: selectedRecord.output_url, controls: true, style: { width: "100%", borderRadius: 10, marginBottom: 12 } }) :
+                            _jsx("img", { src: selectedRecord.output_url, alt: "", style: { width: "100%", borderRadius: 10, marginBottom: 12 } })), _jsx("div", { style: { fontSize: 12, fontWeight: 600, color: "#1a1a1a", marginBottom: 4 }, children: selectedRecord.model }), _jsx("div", { style: { fontSize: 11, color: "#6b7280", marginBottom: 8, lineHeight: 1.5 }, children: selectedRecord.prompt }), _jsxs("div", { style: { fontSize: 10, color: "#9ca3af", marginBottom: 4 }, children: ["\u23F1 ", (selectedRecord.generation_time_ms / 1000).toFixed(1), "s"] }), _jsxs("div", { style: { fontSize: 10, color: "#9ca3af", marginBottom: 12 }, children: ["\uD83D\uDCC5 ", new Date(selectedRecord.timestamp).toLocaleString()] }), _jsx("button", { onClick: () => { onRerun({ model: selectedRecord.model, prompt: selectedRecord.prompt, params: selectedRecord.params }); }, style: { width: "100%", padding: "10px", background: "#c026d3", color: "#fff", border: "none", borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: "pointer" }, children: "Re-run \u2726" })] })) : (records.map((r, i) => (_jsxs("div", { onClick: () => setSelectedRecord(r), style: { display: "flex", gap: 8, padding: "8px 6px", cursor: "pointer", borderRadius: 8, marginBottom: 2, transition: "background 0.12s" }, onMouseOver: (e) => { e.currentTarget.style.background = "#f5f5f7"; }, onMouseOut: (e) => { e.currentTarget.style.background = "transparent"; }, children: [r.output_url && _jsx("img", { src: r.output_url, alt: "", style: { width: 40, height: 40, borderRadius: 6, objectFit: "cover", flexShrink: 0 }, onError: (e) => { e.target.style.display = "none"; } }), _jsxs("div", { style: { flex: 1, minWidth: 0 }, children: [_jsx("div", { style: { fontSize: 10, fontWeight: 600, color: "#1a1a1a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: r.prompt?.slice(0, 50) || "No prompt" }), _jsxs("div", { style: { fontSize: 9, color: "#9ca3af" }, children: [r.model, " \u00B7 ", (r.generation_time_ms / 1000).toFixed(1), "s \u00B7 ", new Date(r.timestamp).toLocaleTimeString()] })] })] }, i)))) })] }));
+}
+// ---------------------------------------------------------------------------
 // Main App
 // ---------------------------------------------------------------------------
 export default function App() {
@@ -566,7 +667,9 @@ export default function App() {
     const [isRunning, setIsRunning] = useState(false);
     const [falApiKey, setFalApiKey] = useState(() => localStorage.getItem("openflow_fal_key") || "148ec4ac-aafc-416b-9213-74cacdeefe5e:0dc2faa972e5762ba57fc758b2fd99e8");
     const [assets, setAssets] = useState(() => getAssets());
+    const [darkMode, setDarkMode] = useState(() => localStorage.getItem("openflow_dark") === "true");
     const idCounter = useRef(0);
+    const { addToast, ToastContainer } = useToast();
     const grouped = useMemo(() => groupByCategory(NODE_DEFS), []);
     const refreshAssets = useCallback(() => setAssets(getAssets()), []);
     const onConnect = useCallback((connection) => {
@@ -615,62 +718,136 @@ export default function App() {
             return;
         const key = falApiKey;
         if (!key) {
-            alert("Set your fal.ai API key in Settings first!");
+            addToast("Set your fal.ai API key in Settings first!", "error");
             return;
         }
         localStorage.setItem("openflow_fal_key", key);
         const def = node.data.def;
         const values = node.data.values;
         const modelKey = values.model || "flux-dev";
+        const startTime = Date.now();
         setNodeData(nodeId, { status: "running", outputUrl: undefined });
         const result = await runFalGeneration(modelKey, values, key);
         if (result.url) {
+            const genTime = Date.now() - startTime;
             setNodeData(nodeId, { status: "done", outputUrl: result.url });
-            // Save to asset manager
             const isVideo = def.category === "video" || def.id === "video.img_to_video";
-            saveAsset({
-                url: result.url,
-                type: isVideo ? "video" : "image",
-                prompt: values.prompt || values.text || "",
-                model: modelKey,
-                timestamp: Date.now(),
-            });
+            saveAsset({ url: result.url, type: isVideo ? "video" : "image", prompt: values.prompt || values.text || "", model: modelKey, timestamp: Date.now() });
+            saveTrainingRecord({ timestamp: Date.now(), model: modelKey, prompt: values.prompt || "", params: values, output_url: result.url, generation_time_ms: genTime, user_id: "local" });
             refreshAssets();
+            addToast(`Generated! (${(genTime / 1000).toFixed(1)}s)`, "success");
         }
         else {
             setNodeData(nodeId, { status: `Error: ${result.error}` });
+            addToast(`Error: ${result.error?.slice(0, 60)}`, "error");
         }
-    }, [nodes, falApiKey, setNodeData, refreshAssets]);
+    }, [nodes, falApiKey, setNodeData, refreshAssets, addToast]);
     runSingleNodeRef.current = runSingleNode;
     const handleRun = useCallback(async () => {
         if (!falApiKey) {
-            alert("Enter your fal.ai API key in the sidebar first!");
+            addToast("Enter your fal.ai API key in Settings!", "error");
             return;
         }
         localStorage.setItem("openflow_fal_key", falApiKey);
         setIsRunning(true);
+        // Topological sort for dependency order
         const genNodes = nodes.filter((n) => {
             const def = n.data.def;
             return def.inputs.some((inp) => inp.name === "model");
         });
-        for (const node of genNodes) {
-            const def = node.data.def;
-            const values = node.data.values;
-            const modelKey = values.model || "flux-dev";
-            setNodeData(node.id, { status: "running", outputUrl: undefined });
-            const result = await runFalGeneration(modelKey, values, falApiKey);
-            if (result.url) {
-                setNodeData(node.id, { status: "done", outputUrl: result.url });
-                const isVideo = def.category === "video" || def.id === "video.img_to_video";
-                saveAsset({ url: result.url, type: isVideo ? "video" : "image", prompt: values.prompt || "", model: modelKey, timestamp: Date.now() });
-                refreshAssets();
+        const nodeIds = genNodes.map(n => n.id);
+        const inDegree = {};
+        const adj = {};
+        nodeIds.forEach(id => { inDegree[id] = 0; adj[id] = []; });
+        edges.forEach(e => {
+            if (nodeIds.includes(e.source) && nodeIds.includes(e.target)) {
+                adj[e.source].push(e.target);
+                inDegree[e.target] = (inDegree[e.target] || 0) + 1;
             }
-            else {
-                setNodeData(node.id, { status: `Error: ${result.error}` });
+        });
+        const queue = nodeIds.filter(id => inDegree[id] === 0);
+        const sorted = [];
+        while (queue.length) {
+            const id = queue.shift();
+            sorted.push(id);
+            for (const next of (adj[id] || [])) {
+                inDegree[next]--;
+                if (inDegree[next] === 0)
+                    queue.push(next);
             }
         }
+        // Add any remaining (cycles)
+        nodeIds.forEach(id => { if (!sorted.includes(id))
+            sorted.push(id); });
+        for (const nodeId of sorted) {
+            const node = genNodes.find(n => n.id === nodeId);
+            if (!node)
+                continue;
+            await runSingleNode(nodeId);
+        }
         setIsRunning(false);
-    }, [nodes, falApiKey, setNodeData, refreshAssets]);
+        addToast("All nodes complete!", "success");
+    }, [nodes, edges, falApiKey, runSingleNode, addToast]);
+    // Keyboard shortcuts
+    useEffect(() => {
+        const handler = (e) => {
+            if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.tagName === "SELECT")
+                return;
+            if (e.key === " " && !e.ctrlKey) {
+                e.preventDefault();
+                const selected = nodes.find(n => n.selected);
+                if (selected)
+                    runSingleNodeRef.current(selected.id);
+            }
+            if (e.key === "Delete" || e.key === "Backspace") {
+                const selected = nodes.filter(n => n.selected);
+                if (selected.length)
+                    setNodes(nds => nds.filter(n => !n.selected));
+            }
+            if (e.key === "s" && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                saveProject();
+                addToast("Project saved!", "success");
+            }
+            if (e.key === "d" && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                const selected = nodes.filter(n => n.selected);
+                if (selected.length) {
+                    selected.forEach(n => {
+                        const def = n.data.def;
+                        const vals = n.data.values;
+                        idCounter.current += 1;
+                        const nodeId = `${def.id}_${idCounter.current}`;
+                        const newNode = {
+                            id: nodeId, type: "flowNode",
+                            position: { x: n.position.x + 40, y: n.position.y + 40 },
+                            data: { def, values: { ...vals }, onChange: (key, val) => updateNodeValue(nodeId, key, val), onRun: () => runSingleNodeRef.current(nodeId), onDelete: () => setNodes((nds) => nds.filter((nd) => nd.id !== nodeId)) },
+                        };
+                        setNodes((nds) => [...nds, newNode]);
+                    });
+                    addToast(`Duplicated ${selected.length} node(s)`, "success");
+                }
+            }
+        };
+        window.addEventListener("keydown", handler);
+        return () => window.removeEventListener("keydown", handler);
+    }, [nodes, setNodes, addToast]);
+    // Export workflow as JSON
+    const exportWorkflow = useCallback(() => {
+        const workflow = { nodes: nodes.map(n => ({ id: n.id, type: n.type, position: n.position, defId: n.data.def.id, values: n.data.values })), edges };
+        const blob = new Blob([JSON.stringify(workflow, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `openflow-workflow-${Date.now()}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        addToast("Workflow exported!", "success");
+    }, [nodes, edges, addToast]);
+    // Dark mode effect
+    useEffect(() => {
+        localStorage.setItem("openflow_dark", String(darkMode));
+    }, [darkMode]);
     const onDragStart = (e, def) => {
         e.dataTransfer.setData("application/openflow-node", JSON.stringify(def));
         e.dataTransfer.effectAllowed = "move";
@@ -866,7 +1043,21 @@ export default function App() {
     }
     return (_jsxs("div", { style: { display: "flex", height: "100vh", background: "#f0f0f2", color: "#1a1a1a", fontFamily: "'SF Pro Display', 'Inter', -apple-system, 'Helvetica Neue', sans-serif" }, children: [_jsxs("nav", { style: { width: 56, background: "#0e0e10", display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 16, paddingBottom: 16, flexShrink: 0, zIndex: 20 }, children: [_jsx("div", { style: { width: 36, height: 36, borderRadius: "50%", background: "#c026d3", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, color: "#0e0e10", marginBottom: 24, cursor: "pointer", letterSpacing: "-0.5px" }, title: "OpenClaw", onClick: () => { setActivePanel(null); setCurrentView("dashboard"); }, children: "OF" }), _jsx("button", { title: "Dashboard", onClick: () => { setCurrentView("dashboard"); setActivePanel(null); }, style: { width: 38, height: 38, borderRadius: 10, border: "none", background: currentView === "dashboard" && !activePanel ? "#1e1e22" : "transparent", color: currentView === "dashboard" && !activePanel ? "#c026d3" : "#6b6b75", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }, dangerouslySetInnerHTML: { __html: SVG_ICONS.dashboard } }), categories.map((cat) => (_jsx("button", { title: CATEGORIES[cat] || cat, onClick: () => { setCurrentView("canvas"); setActivePanel(activePanel === cat ? null : cat); }, style: { width: 38, height: 38, borderRadius: 10, border: "none", background: activePanel === cat ? "#1e1e22" : "transparent", color: activePanel === cat ? "#c026d3" : "#6b6b75", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4, transition: "all 0.15s" }, onMouseOver: (e) => { if (activePanel !== cat)
                             e.currentTarget.style.color = "#9ca3af"; }, onMouseOut: (e) => { if (activePanel !== cat)
-                            e.currentTarget.style.color = "#6b6b75"; }, dangerouslySetInnerHTML: { __html: SVG_ICONS[cat] || "" } }, cat))), _jsx("div", { style: { flex: 1 } }), _jsx("button", { title: "Asset Manager", onClick: () => { setActivePanel(activePanel === "assets" ? null : "assets"); }, style: { width: 38, height: 38, borderRadius: 10, border: "none", background: activePanel === "assets" ? "#1e1e22" : "transparent", color: activePanel === "assets" ? "#c026d3" : "#6b6b75", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }, dangerouslySetInnerHTML: { __html: SVG_ICONS.assets } }), _jsx("button", { title: "AI Chat", onClick: () => { setActivePanel(activePanel === "chat" ? null : "chat"); }, style: { width: 38, height: 38, borderRadius: 10, border: "none", background: activePanel === "chat" ? "#1e1e22" : "transparent", color: activePanel === "chat" ? "#c026d3" : "#6b6b75", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }, dangerouslySetInnerHTML: { __html: SVG_ICONS.chat } }), _jsx("button", { title: "Scene Builder", onClick: () => { setCurrentView("canvas"); setActivePanel(activePanel === "scenes" ? null : "scenes"); }, style: { width: 38, height: 38, borderRadius: 10, border: "none", background: activePanel === "scenes" ? "#1e1e22" : "transparent", color: activePanel === "scenes" ? "#c026d3" : "#6b6b75", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }, children: _jsxs("svg", { width: "20", height: "20", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", children: [_jsx("rect", { x: "2", y: "2", width: "20", height: "20", rx: "2" }), _jsx("line", { x1: "2", y1: "7", x2: "22", y2: "7" }), _jsx("line", { x1: "7", y1: "2", x2: "7", y2: "7" })] }) }), _jsx("button", { title: "Projects", onClick: () => { setActivePanel(activePanel === "projects" ? null : "projects"); loadProjects(); }, style: { width: 38, height: 38, borderRadius: 10, border: "none", background: activePanel === "projects" ? "#1e1e22" : "transparent", color: activePanel === "projects" ? "#c026d3" : "#6b6b75", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }, children: _jsx("svg", { width: "20", height: "20", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", children: _jsx("path", { d: "M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" }) }) }), _jsx("button", { title: "Settings", onClick: () => setActivePanel(activePanel === "settings" ? null : "settings"), style: { width: 38, height: 38, borderRadius: 10, border: "none", background: activePanel === "settings" ? "#1e1e22" : "transparent", color: activePanel === "settings" ? "#c026d3" : "#6b6b75", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }, dangerouslySetInnerHTML: { __html: SVG_ICONS.settings } }), _jsx("button", { title: "Run workflow", onClick: handleRun, disabled: isRunning || nodes.length === 0, style: { width: 38, height: 38, borderRadius: 10, border: "none", background: isRunning ? "#2a2a30" : "#c026d3", color: isRunning ? "#6b6b75" : "#0e0e10", cursor: isRunning ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center" }, dangerouslySetInnerHTML: { __html: SVG_ICONS.run } })] }), activePanel && (_jsx("aside", { style: { width: activePanel === "chat" ? 300 : 220, background: "#ffffff", borderRight: "1px solid #ebebee", overflowY: "auto", flexShrink: 0, zIndex: 15, boxShadow: "4px 0 16px rgba(0,0,0,0.03)", display: "flex", flexDirection: "column" }, children: activePanel === "assets" ? (_jsx(AssetManagerPanel, { assets: assets })) : activePanel === "chat" ? (_jsx(ChatPanel, {})) : activePanel === "scenes" ? (_jsxs("div", { style: { padding: 20 }, children: [_jsx("div", { style: { fontSize: 13, fontWeight: 600, color: "#1a1a1a", marginBottom: 16 }, children: "\uD83C\uDFAC Scene Builder" }), _jsx("div", { style: { fontSize: 10, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 6 }, children: "Describe your story" }), _jsx("textarea", { value: sceneStory, onChange: (e) => setSceneStory(e.target.value), placeholder: "A knight rides through a misty forest, discovers a glowing crystal cave, and meets an ancient dragon...", rows: 6, style: { width: "100%", background: "#f5f5f7", border: "none", borderRadius: 10, color: "#1a1a1a", fontSize: 12, padding: "10px 12px", resize: "vertical", outline: "none", fontFamily: "inherit", lineHeight: 1.5, boxSizing: "border-box" } }), _jsx("button", { onClick: generateScenes, disabled: sceneLoading || !sceneStory.trim(), style: { width: "100%", marginTop: 10, padding: "10px", background: sceneLoading ? "#e5e7eb" : "#c026d3", color: sceneLoading ? "#9ca3af" : "#fff", border: "none", borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: sceneLoading ? "not-allowed" : "pointer" }, children: sceneLoading ? "Generating..." : "Generate Scenes ✦" }), _jsx("div", { style: { fontSize: 10, color: "#9ca3af", marginTop: 8 }, children: "Splits your story into 3-5 scenes as connected image nodes." })] })) : activePanel === "projects" ? (_jsxs("div", { style: { padding: 20 }, children: [_jsx("div", { style: { fontSize: 13, fontWeight: 600, color: "#1a1a1a", marginBottom: 16 }, children: "\uD83D\uDCC1 Projects" }), !authToken ? (_jsxs("div", { children: [_jsx("div", { style: { fontSize: 10, fontWeight: 600, color: "#9ca3af", marginBottom: 6 }, children: "LOGIN / SIGNUP" }), _jsx("input", { placeholder: "Email", value: authEmail, onChange: e => setAuthEmail(e.target.value), style: { width: "100%", background: "#f5f5f7", border: "none", borderRadius: 8, fontSize: 12, padding: "8px 12px", outline: "none", marginBottom: 6, boxSizing: "border-box" } }), _jsx("input", { placeholder: "Password", type: "password", value: authPass, onChange: e => setAuthPass(e.target.value), style: { width: "100%", background: "#f5f5f7", border: "none", borderRadius: 8, fontSize: 12, padding: "8px 12px", outline: "none", marginBottom: 8, boxSizing: "border-box" } }), _jsxs("div", { style: { display: "flex", gap: 6 }, children: [_jsx("button", { onClick: () => handleAuth("login"), style: { flex: 1, padding: "8px", background: "#c026d3", color: "#fff", border: "none", borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: "pointer" }, children: "Login" }), _jsx("button", { onClick: () => handleAuth("signup"), style: { flex: 1, padding: "8px", background: "#f5f5f7", color: "#1a1a1a", border: "1px solid #ebebee", borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: "pointer" }, children: "Sign Up" })] })] })) : (_jsxs("div", { children: [_jsxs("div", { style: { display: "flex", gap: 6, marginBottom: 12 }, children: [_jsx("input", { placeholder: "Project name", value: projectName, onChange: e => setProjectName(e.target.value), style: { flex: 1, background: "#f5f5f7", border: "none", borderRadius: 8, fontSize: 12, padding: "8px 12px", outline: "none" } }), _jsx("button", { onClick: saveProject, style: { padding: "8px 12px", background: "#c026d3", color: "#fff", border: "none", borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: "pointer" }, children: "Save" })] }), _jsx("div", { style: { fontSize: 10, fontWeight: 600, color: "#9ca3af", marginBottom: 8 }, children: "SAVED PROJECTS" }), projectsList.length === 0 && _jsx("div", { style: { fontSize: 11, color: "#9ca3af" }, children: "No projects yet" }), projectsList.map(p => (_jsxs("div", { onClick: () => { loadProject(p.workflow_json); setCurrentView("canvas"); }, style: { padding: "8px 10px", background: "#f5f5f7", borderRadius: 8, marginBottom: 4, cursor: "pointer", fontSize: 12, fontWeight: 500, color: "#1a1a1a" }, onMouseOver: e => { e.currentTarget.style.background = "#e8e8eb"; }, onMouseOut: e => { e.currentTarget.style.background = "#f5f5f7"; }, children: [p.name, _jsx("div", { style: { fontSize: 9, color: "#9ca3af", marginTop: 2 }, children: p.updated_at?.slice(0, 16) })] }, p.id))), _jsx("button", { onClick: () => { setAuthToken(""); localStorage.removeItem("openflow_token"); }, style: { marginTop: 12, padding: "6px", background: "transparent", border: "none", fontSize: 10, color: "#9ca3af", cursor: "pointer" }, children: "Logout" })] }))] })) : activePanel === "settings" ? (_jsxs("div", { style: { padding: 20 }, children: [_jsx("div", { style: { fontSize: 13, fontWeight: 600, color: "#1a1a1a", marginBottom: 16 }, children: "Settings" }), _jsx("div", { style: { fontSize: 10, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 6 }, children: "fal.ai API Key" }), _jsx("input", { type: "password", value: falApiKey, onChange: (e) => setFalApiKey(e.target.value), onKeyDown: stopKeys, placeholder: "fal-xxxxxxxx", style: { width: "100%", background: "#f5f5f7", border: "none", borderRadius: 8, color: "#1a1a1a", fontSize: 12, padding: "8px 12px", outline: "none", boxSizing: "border-box" } }), _jsxs("div", { style: { fontSize: 10, color: "#9ca3af", marginTop: 6 }, children: ["Free at ", _jsx("a", { href: "https://fal.ai/dashboard/keys", target: "_blank", rel: "noopener", style: { color: "#1a1a1a", fontWeight: 600, textDecoration: "none" }, children: "fal.ai" })] }), _jsxs("div", { style: { fontSize: 10, color: "#c4c4c8", marginTop: 20 }, children: [nodes.length, " nodes \u00B7 ", edges.length, " connections"] })] })) : (_jsxs("div", { style: { padding: "16px 0" }, children: [_jsx("div", { style: { padding: "0 16px 10px", fontSize: 13, fontWeight: 600, color: "#1a1a1a" }, children: CATEGORIES[activePanel] || activePanel }), (grouped[activePanel] || []).map((def) => {
+                            e.currentTarget.style.color = "#6b6b75"; }, dangerouslySetInnerHTML: { __html: SVG_ICONS[cat] || "" } }, cat))), _jsx("button", { title: "Model Manager", onClick: () => { setActivePanel(activePanel === "models" ? null : "models"); }, style: { width: 38, height: 38, borderRadius: 10, border: "none", background: activePanel === "models" ? "#1e1e22" : "transparent", color: activePanel === "models" ? "#c026d3" : "#6b6b75", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }, children: _jsxs("svg", { width: "20", height: "20", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", children: [_jsx("path", { d: "M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" }), _jsx("polyline", { points: "3.27 6.96 12 12.01 20.73 6.96" }), _jsx("line", { x1: "12", y1: "22.08", x2: "12", y2: "12" })] }) }), _jsx("button", { title: "Workflow Templates", onClick: () => { setActivePanel(activePanel === "workflows" ? null : "workflows"); }, style: { width: 38, height: 38, borderRadius: 10, border: "none", background: activePanel === "workflows" ? "#1e1e22" : "transparent", color: activePanel === "workflows" ? "#c026d3" : "#6b6b75", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }, children: _jsxs("svg", { width: "20", height: "20", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", children: [_jsx("rect", { x: "3", y: "11", width: "18", height: "10", rx: "2" }), _jsx("circle", { cx: "9", cy: "16", r: "1" }), _jsx("circle", { cx: "15", cy: "16", r: "1" }), _jsx("path", { d: "M8 11V7a4 4 0 0 1 8 0v4" }), _jsx("line", { x1: "12", y1: "4", x2: "12", y2: "2" }), _jsx("line", { x1: "10", y1: "2", x2: "14", y2: "2" })] }) }), _jsx("div", { style: { flex: 1 } }), _jsx("button", { title: "Asset Manager", onClick: () => { setActivePanel(activePanel === "assets" ? null : "assets"); }, style: { width: 38, height: 38, borderRadius: 10, border: "none", background: activePanel === "assets" ? "#1e1e22" : "transparent", color: activePanel === "assets" ? "#c026d3" : "#6b6b75", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }, dangerouslySetInnerHTML: { __html: SVG_ICONS.assets } }), _jsx("button", { title: "AI Chat", onClick: () => { setActivePanel(activePanel === "chat" ? null : "chat"); }, style: { width: 38, height: 38, borderRadius: 10, border: "none", background: activePanel === "chat" ? "#1e1e22" : "transparent", color: activePanel === "chat" ? "#c026d3" : "#6b6b75", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }, dangerouslySetInnerHTML: { __html: SVG_ICONS.chat } }), _jsx("button", { title: "Generation History", onClick: () => { setActivePanel(activePanel === "history" ? null : "history"); }, style: { width: 38, height: 38, borderRadius: 10, border: "none", background: activePanel === "history" ? "#1e1e22" : "transparent", color: activePanel === "history" ? "#c026d3" : "#6b6b75", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }, children: _jsxs("svg", { width: "20", height: "20", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", children: [_jsx("circle", { cx: "12", cy: "12", r: "10" }), _jsx("polyline", { points: "12 6 12 12 16 14" })] }) }), _jsx("button", { title: "Scene Builder", onClick: () => { setCurrentView("canvas"); setActivePanel(activePanel === "scenes" ? null : "scenes"); }, style: { width: 38, height: 38, borderRadius: 10, border: "none", background: activePanel === "scenes" ? "#1e1e22" : "transparent", color: activePanel === "scenes" ? "#c026d3" : "#6b6b75", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }, children: _jsxs("svg", { width: "20", height: "20", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", children: [_jsx("rect", { x: "2", y: "2", width: "20", height: "20", rx: "2" }), _jsx("line", { x1: "2", y1: "7", x2: "22", y2: "7" }), _jsx("line", { x1: "7", y1: "2", x2: "7", y2: "7" })] }) }), _jsx("button", { title: "Projects", onClick: () => { setActivePanel(activePanel === "projects" ? null : "projects"); loadProjects(); }, style: { width: 38, height: 38, borderRadius: 10, border: "none", background: activePanel === "projects" ? "#1e1e22" : "transparent", color: activePanel === "projects" ? "#c026d3" : "#6b6b75", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }, children: _jsx("svg", { width: "20", height: "20", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", children: _jsx("path", { d: "M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" }) }) }), _jsx("button", { title: "Settings", onClick: () => setActivePanel(activePanel === "settings" ? null : "settings"), style: { width: 38, height: 38, borderRadius: 10, border: "none", background: activePanel === "settings" ? "#1e1e22" : "transparent", color: activePanel === "settings" ? "#c026d3" : "#6b6b75", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }, dangerouslySetInnerHTML: { __html: SVG_ICONS.settings } }), _jsx("button", { title: "Run workflow", onClick: handleRun, disabled: isRunning || nodes.length === 0, style: { width: 38, height: 38, borderRadius: 10, border: "none", background: isRunning ? "#2a2a30" : "#c026d3", color: isRunning ? "#6b6b75" : "#0e0e10", cursor: isRunning ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center" }, dangerouslySetInnerHTML: { __html: SVG_ICONS.run } })] }), activePanel && (_jsx("aside", { style: { width: activePanel === "chat" ? 300 : activePanel === "models" ? 280 : 220, background: "#ffffff", borderRight: "1px solid #ebebee", overflowY: "auto", flexShrink: 0, zIndex: 15, boxShadow: "4px 0 16px rgba(0,0,0,0.03)", display: "flex", flexDirection: "column" }, children: activePanel === "models" ? (_jsx(ModelManagerPanel, { onCreateNode: (defId, modelKey) => {
+                        const def = NODE_DEFS.find(d => d.id === defId);
+                        if (def) {
+                            addNodeWithHandler(def, { model: modelKey });
+                            setActivePanel(null);
+                            setCurrentView("canvas");
+                        }
+                    } })) : activePanel === "workflows" ? (_jsx(WorkflowTemplatesPanel, { onLoadPipeline: (pipeline) => { loadTemplate(pipeline); setActivePanel(null); } })) : activePanel === "assets" ? (_jsx(AssetManagerPanel, { assets: assets })) : activePanel === "chat" ? (_jsx(ChatPanel, {})) : activePanel === "scenes" ? (_jsxs("div", { style: { padding: 20 }, children: [_jsx("div", { style: { fontSize: 13, fontWeight: 600, color: "#1a1a1a", marginBottom: 16 }, children: "\uD83C\uDFAC Scene Builder" }), _jsx("div", { style: { fontSize: 10, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 6 }, children: "Describe your story" }), _jsx("textarea", { value: sceneStory, onChange: (e) => setSceneStory(e.target.value), placeholder: "A knight rides through a misty forest, discovers a glowing crystal cave, and meets an ancient dragon...", rows: 6, style: { width: "100%", background: "#f5f5f7", border: "none", borderRadius: 10, color: "#1a1a1a", fontSize: 12, padding: "10px 12px", resize: "vertical", outline: "none", fontFamily: "inherit", lineHeight: 1.5, boxSizing: "border-box" } }), _jsx("button", { onClick: generateScenes, disabled: sceneLoading || !sceneStory.trim(), style: { width: "100%", marginTop: 10, padding: "10px", background: sceneLoading ? "#e5e7eb" : "#c026d3", color: sceneLoading ? "#9ca3af" : "#fff", border: "none", borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: sceneLoading ? "not-allowed" : "pointer" }, children: sceneLoading ? "Generating..." : "Generate Scenes ✦" }), _jsx("div", { style: { fontSize: 10, color: "#9ca3af", marginTop: 8 }, children: "Splits your story into 3-5 scenes as connected image nodes." })] })) : activePanel === "projects" ? (_jsxs("div", { style: { padding: 20 }, children: [_jsx("div", { style: { fontSize: 13, fontWeight: 600, color: "#1a1a1a", marginBottom: 16 }, children: "\uD83D\uDCC1 Projects" }), !authToken ? (_jsxs("div", { children: [_jsx("div", { style: { fontSize: 10, fontWeight: 600, color: "#9ca3af", marginBottom: 6 }, children: "LOGIN / SIGNUP" }), _jsx("input", { placeholder: "Email", value: authEmail, onChange: e => setAuthEmail(e.target.value), style: { width: "100%", background: "#f5f5f7", border: "none", borderRadius: 8, fontSize: 12, padding: "8px 12px", outline: "none", marginBottom: 6, boxSizing: "border-box" } }), _jsx("input", { placeholder: "Password", type: "password", value: authPass, onChange: e => setAuthPass(e.target.value), style: { width: "100%", background: "#f5f5f7", border: "none", borderRadius: 8, fontSize: 12, padding: "8px 12px", outline: "none", marginBottom: 8, boxSizing: "border-box" } }), _jsxs("div", { style: { display: "flex", gap: 6 }, children: [_jsx("button", { onClick: () => handleAuth("login"), style: { flex: 1, padding: "8px", background: "#c026d3", color: "#fff", border: "none", borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: "pointer" }, children: "Login" }), _jsx("button", { onClick: () => handleAuth("signup"), style: { flex: 1, padding: "8px", background: "#f5f5f7", color: "#1a1a1a", border: "1px solid #ebebee", borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: "pointer" }, children: "Sign Up" })] })] })) : (_jsxs("div", { children: [_jsxs("div", { style: { display: "flex", gap: 6, marginBottom: 12 }, children: [_jsx("input", { placeholder: "Project name", value: projectName, onChange: e => setProjectName(e.target.value), style: { flex: 1, background: "#f5f5f7", border: "none", borderRadius: 8, fontSize: 12, padding: "8px 12px", outline: "none" } }), _jsx("button", { onClick: saveProject, style: { padding: "8px 12px", background: "#c026d3", color: "#fff", border: "none", borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: "pointer" }, children: "Save" })] }), _jsx("div", { style: { fontSize: 10, fontWeight: 600, color: "#9ca3af", marginBottom: 8 }, children: "SAVED PROJECTS" }), projectsList.length === 0 && _jsx("div", { style: { fontSize: 11, color: "#9ca3af" }, children: "No projects yet" }), projectsList.map(p => (_jsxs("div", { onClick: () => { loadProject(p.workflow_json); setCurrentView("canvas"); }, style: { padding: "8px 10px", background: "#f5f5f7", borderRadius: 8, marginBottom: 4, cursor: "pointer", fontSize: 12, fontWeight: 500, color: "#1a1a1a" }, onMouseOver: e => { e.currentTarget.style.background = "#e8e8eb"; }, onMouseOut: e => { e.currentTarget.style.background = "#f5f5f7"; }, children: [p.name, _jsx("div", { style: { fontSize: 9, color: "#9ca3af", marginTop: 2 }, children: p.updated_at?.slice(0, 16) })] }, p.id))), _jsx("button", { onClick: () => { setAuthToken(""); localStorage.removeItem("openflow_token"); }, style: { marginTop: 12, padding: "6px", background: "transparent", border: "none", fontSize: 10, color: "#9ca3af", cursor: "pointer" }, children: "Logout" })] }))] })) : activePanel === "history" ? (_jsx(HistoryPanel, { onRerun: (record) => {
+                        const def = NODE_DEFS.find(d => d.id === "image.text_to_image");
+                        if (def) {
+                            addNodeWithHandler(def, { model: record.model, prompt: record.prompt, ...record.params });
+                            setActivePanel(null);
+                            setCurrentView("canvas");
+                        }
+                    } })) : activePanel === "settings" ? (_jsxs("div", { style: { padding: 20, overflow: "auto" }, children: [_jsx("div", { style: { fontSize: 13, fontWeight: 600, color: "#1a1a1a", marginBottom: 16 }, children: "Settings" }), _jsx("div", { style: { fontSize: 10, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 6 }, children: "API Keys" }), _jsx("div", { style: { fontSize: 10, color: "#6b7280", marginBottom: 4 }, children: "fal.ai (required)" }), _jsx("input", { type: "password", value: falApiKey, onChange: (e) => { setFalApiKey(e.target.value); localStorage.setItem("openflow_fal_key", e.target.value); }, onKeyDown: stopKeys, placeholder: "fal-xxxxxxxx", style: { width: "100%", background: "#f5f5f7", border: "none", borderRadius: 8, color: "#1a1a1a", fontSize: 12, padding: "8px 12px", outline: "none", boxSizing: "border-box", marginBottom: 6 } }), _jsx("div", { style: { fontSize: 10, color: "#6b7280", marginBottom: 4 }, children: "OpenAI (optional)" }), _jsx("input", { type: "password", value: localStorage.getItem("openflow_openai_key") || "", onChange: (e) => localStorage.setItem("openflow_openai_key", e.target.value), onKeyDown: stopKeys, placeholder: "sk-...", style: { width: "100%", background: "#f5f5f7", border: "none", borderRadius: 8, color: "#1a1a1a", fontSize: 12, padding: "8px 12px", outline: "none", boxSizing: "border-box", marginBottom: 6 } }), _jsx("div", { style: { fontSize: 10, color: "#6b7280", marginBottom: 4 }, children: "Replicate (optional)" }), _jsx("input", { type: "password", value: localStorage.getItem("openflow_replicate_key") || "", onChange: (e) => localStorage.setItem("openflow_replicate_key", e.target.value), onKeyDown: stopKeys, placeholder: "r8_...", style: { width: "100%", background: "#f5f5f7", border: "none", borderRadius: 8, color: "#1a1a1a", fontSize: 12, padding: "8px 12px", outline: "none", boxSizing: "border-box" } }), _jsxs("div", { style: { fontSize: 10, color: "#9ca3af", marginTop: 6, marginBottom: 16 }, children: ["Get keys at ", _jsx("a", { href: "https://fal.ai/dashboard/keys", target: "_blank", rel: "noopener", style: { color: "#1a1a1a", fontWeight: 600, textDecoration: "none" }, children: "fal.ai" })] }), _jsx("div", { style: { fontSize: 10, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 6 }, children: "Generation Defaults" }), _jsx("div", { style: { fontSize: 10, color: "#6b7280", marginBottom: 4 }, children: "Default image size" }), _jsxs("select", { value: localStorage.getItem("openflow_default_size") || "1024", onChange: (e) => localStorage.setItem("openflow_default_size", e.target.value), style: { width: "100%", background: "#f5f5f7", border: "none", borderRadius: 8, fontSize: 12, padding: "8px 12px", outline: "none", cursor: "pointer", marginBottom: 6, boxSizing: "border-box" }, children: [_jsx("option", { value: "512", children: "512\u00D7512" }), _jsx("option", { value: "768", children: "768\u00D7768" }), _jsx("option", { value: "1024", children: "1024\u00D71024" }), _jsx("option", { value: "1280", children: "1280\u00D71280" })] }), _jsx("div", { style: { fontSize: 10, color: "#6b7280", marginBottom: 4 }, children: "Default model" }), _jsxs("select", { value: localStorage.getItem("openflow_default_model") || "flux-2-pro", onChange: (e) => localStorage.setItem("openflow_default_model", e.target.value), style: { width: "100%", background: "#f5f5f7", border: "none", borderRadius: 8, fontSize: 12, padding: "8px 12px", outline: "none", cursor: "pointer", marginBottom: 6, boxSizing: "border-box" }, children: [_jsx("option", { value: "flux-fast", children: "flux-fast (Fast)" }), _jsx("option", { value: "flux-2-pro", children: "flux-2-pro (Balanced)" }), _jsx("option", { value: "flux-pro-1.1-ultra", children: "flux-pro-1.1-ultra (Quality)" })] }), _jsx("div", { style: { fontSize: 10, color: "#6b7280", marginBottom: 4 }, children: "Quality preset" }), _jsx("div", { style: { display: "flex", gap: 4, marginBottom: 16 }, children: ["fast", "balanced", "quality"].map(p => (_jsx("button", { onClick: () => localStorage.setItem("openflow_quality_preset", p), style: { flex: 1, padding: "6px", background: (localStorage.getItem("openflow_quality_preset") || "balanced") === p ? "#c026d3" : "#f5f5f7", color: (localStorage.getItem("openflow_quality_preset") || "balanced") === p ? "#fff" : "#6b7280", border: "none", borderRadius: 6, fontSize: 10, fontWeight: 600, cursor: "pointer", textTransform: "capitalize" }, children: p }, p))) }), _jsx("div", { style: { fontSize: 10, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 6 }, children: "Appearance" }), _jsx("button", { onClick: () => setDarkMode(!darkMode), style: { width: "100%", padding: "8px 12px", background: "#f5f5f7", border: "1px solid #ebebee", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: "pointer", color: "#1a1a1a", textAlign: "left", marginBottom: 12 }, children: darkMode ? "🌙 Dark Mode ON" : "☀️ Light Mode" }), _jsx("div", { style: { fontSize: 10, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 6 }, children: "Workflow" }), _jsx("button", { onClick: exportWorkflow, style: { width: "100%", padding: "8px 12px", background: "#f5f5f7", border: "1px solid #ebebee", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: "pointer", color: "#1a1a1a", textAlign: "left", marginBottom: 6 }, children: "\uD83D\uDCE4 Export Workflow JSON" }), _jsx("div", { style: { fontSize: 10, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.8px", marginTop: 12, marginBottom: 6 }, children: "Training Data" }), _jsxs("div", { style: { fontSize: 11, color: "#6b7280", marginBottom: 6 }, children: [getTrainingDataCount(), " records collected"] }), _jsx("button", { onClick: () => { exportTrainingData(); addToast("Training data exported!", "success"); }, style: { width: "100%", padding: "8px 12px", background: "#f5f5f7", border: "1px solid #ebebee", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: "pointer", color: "#1a1a1a", textAlign: "left" }, children: "\uD83D\uDCCA Export Training Data (JSONL)" }), _jsx("div", { style: { fontSize: 10, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.8px", marginTop: 16, marginBottom: 6 }, children: "About" }), _jsxs("div", { style: { fontSize: 11, color: "#6b7280", lineHeight: 1.8 }, children: ["OpenFlow v4.0 \u2014 Sprint 4", _jsx("br", {}), _jsx("a", { href: "https://github.com/nikolateslasagent/openflow", target: "_blank", rel: "noopener", style: { color: "#c026d3", textDecoration: "none" }, children: "GitHub" }), " \u00B7 ", _jsx("a", { href: "https://openflow-docs.vercel.app", target: "_blank", rel: "noopener", style: { color: "#c026d3", textDecoration: "none" }, children: "Docs" })] }), _jsxs("div", { style: { fontSize: 10, color: "#c4c4c8", marginTop: 16 }, children: [nodes.length, " nodes \u00B7 ", edges.length, " connections"] }), _jsx("div", { style: { fontSize: 9, color: "#d1d5db", marginTop: 4 }, children: "Shortcuts: Space=Run, Del=Delete, \u2318S=Save, \u2318D=Duplicate" })] })) : (_jsxs("div", { style: { padding: "16px 0" }, children: [_jsx("div", { style: { padding: "0 16px 10px", fontSize: 13, fontWeight: 600, color: "#1a1a1a" }, children: CATEGORIES[activePanel] || activePanel }), (grouped[activePanel] || []).map((def) => {
                             const modelInput = def.inputs.find((inp) => inp.name === "model");
                             const models = modelInput?.options || [];
                             return (_jsxs("div", { children: [_jsxs("div", { draggable: true, onDragStart: (e) => onDragStart(e, def), onClick: () => { addNodeWithHandler(def); setActivePanel(null); setCurrentView("canvas"); }, style: { display: "flex", alignItems: "center", gap: 10, padding: "8px 16px", cursor: "grab", transition: "background 0.12s" }, onMouseOver: (e) => { e.currentTarget.style.background = "#f5f5f7"; }, onMouseOut: (e) => { e.currentTarget.style.background = "transparent"; }, children: [_jsx("span", { style: { color: "#6b7280", display: "flex" }, dangerouslySetInnerHTML: { __html: NODE_ICONS[def.id] || "" } }), _jsx("div", { style: { fontSize: 13, fontWeight: 500, color: "#1a1a1a" }, children: def.name })] }), models.length > 0 && (_jsx("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, padding: "4px 12px 12px" }, children: models.map((m) => (_jsx("button", { onClick: () => { addNodeWithHandler(def, { model: m }); setActivePanel(null); setCurrentView("canvas"); }, style: { background: "#f5f5f7", border: "1px solid #ebebee", borderRadius: 8, padding: "8px 6px", cursor: "pointer", fontSize: 10, fontWeight: 500, color: "#1a1a1a", textAlign: "center", transition: "all 0.12s", lineHeight: 1.3 }, onMouseOver: (e) => { e.currentTarget.style.background = "#e8e8eb"; e.currentTarget.style.borderColor = "#d1d5db"; }, onMouseOut: (e) => { e.currentTarget.style.background = "#f5f5f7"; e.currentTarget.style.borderColor = "#ebebee"; }, children: m }, m))) }))] }, def.id));
@@ -884,5 +1075,26 @@ export default function App() {
                                     const def = NODE_DEFS.find(d => d.id === btn.defId);
                                     if (def)
                                         addNodeWithHandler(def);
-                                }, style: { display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, border: "1px solid #2a2a30", background: "#141416", color: "#9ca3af", fontSize: 12, fontWeight: 600, cursor: "pointer", transition: "all 0.15s" }, onMouseOver: (e) => { e.currentTarget.style.borderColor = "#444"; }, onMouseOut: (e) => { e.currentTarget.style.borderColor = "#2a2a30"; }, children: [_jsx("span", { children: btn.icon }), " ", btn.label] }, btn.label)))] }), currentView === "assets" ? (_jsxs("div", { style: { flex: 1, overflow: "auto", padding: 32 }, children: [_jsx("h2", { style: { fontSize: 20, fontWeight: 600, color: "#1a1a1a", marginBottom: 20 }, children: "All Assets" }), assets.length === 0 && _jsx("div", { style: { fontSize: 14, color: "#9ca3af", textAlign: "center", padding: 60 }, children: "No assets yet. Generate some images or videos!" }), _jsx("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 16 }, children: assets.map((asset, i) => (_jsxs("div", { style: { borderRadius: 12, overflow: "hidden", border: "1px solid #e8e8eb", background: "#fff" }, children: [asset.type === "video" ? (_jsx("video", { src: asset.url, style: { width: "100%", height: 160, objectFit: "cover" }, controls: true, muted: true })) : (_jsx("img", { src: asset.url, alt: "", style: { width: "100%", height: 160, objectFit: "cover" } })), _jsxs("div", { style: { padding: "10px 12px" }, children: [_jsx("div", { style: { fontSize: 11, fontWeight: 600, color: "#1a1a1a" }, children: asset.model }), _jsx("div", { style: { fontSize: 10, color: "#9ca3af", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: asset.prompt }), _jsxs("div", { style: { display: "flex", gap: 6, marginTop: 8 }, children: [_jsx("a", { href: asset.url, download: true, target: "_blank", rel: "noopener", style: { padding: "4px 10px", background: "#c026d3", color: "#fff", borderRadius: 6, fontSize: 10, fontWeight: 600, textDecoration: "none" }, children: "Download" }), _jsx("span", { style: { padding: "4px 8px", background: "#f5f5f7", borderRadius: 6, fontSize: 10, color: "#6b7280" }, children: asset.type })] })] })] }, i))) })] })) : (_jsx("div", { style: { flex: 1 }, children: _jsxs(ReactFlow, { nodes: nodes, edges: edges, onNodesChange: onNodesChange, onEdgesChange: onEdgesChange, onConnect: onConnect, nodeTypes: nodeTypes, fitView: true, style: { background: "#f0f0f2" }, defaultEdgeOptions: { animated: false, style: { stroke: "#d1d5db", strokeWidth: 1.5 }, type: "smoothstep" }, children: [_jsx(Background, { variant: BackgroundVariant.Dots, color: "#c0c0c6", gap: 28, size: 1.2 }), _jsx(Controls, { style: { background: "#ffffff", border: "1px solid #e8e8eb", borderRadius: 10, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" } }), _jsx(MiniMap, { style: { background: "#ffffff", borderRadius: 10, border: "1px solid #e8e8eb", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }, nodeColor: "#d1d5db", maskColor: "rgba(240,240,242,0.8)" })] }) }))] }))] }));
+                                }, style: { display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, border: "1px solid #2a2a30", background: "#141416", color: "#9ca3af", fontSize: 12, fontWeight: 600, cursor: "pointer", transition: "all 0.15s" }, onMouseOver: (e) => { e.currentTarget.style.borderColor = "#444"; }, onMouseOut: (e) => { e.currentTarget.style.borderColor = "#2a2a30"; }, children: [_jsx("span", { children: btn.icon }), " ", btn.label] }, btn.label))), _jsx("div", { style: { flex: 1 } }), nodes.filter(n => n.selected).length > 1 && (_jsxs(_Fragment, { children: [_jsxs("span", { style: { fontSize: 11, color: "#9ca3af" }, children: [nodes.filter(n => n.selected).length, " selected"] }), _jsx("button", { onClick: () => {
+                                            const selected = nodes.filter(n => n.selected);
+                                            (async () => {
+                                                for (const n of selected) {
+                                                    await runSingleNode(n.id);
+                                                }
+                                                addToast(`Ran ${selected.length} nodes`, "success");
+                                            })();
+                                        }, style: { padding: "8px 14px", borderRadius: 8, border: "1px solid #2a2a30", background: "#141416", color: "#22c55e", fontSize: 12, fontWeight: 600, cursor: "pointer" }, children: "\u25B6 Run Selected" }), _jsx("button", { onClick: () => { setNodes(nds => nds.filter(n => !n.selected)); addToast("Deleted selected", "success"); }, style: { padding: "8px 14px", borderRadius: 8, border: "1px solid #2a2a30", background: "#141416", color: "#ef4444", fontSize: 12, fontWeight: 600, cursor: "pointer" }, children: "\uD83D\uDDD1 Delete" })] })), _jsx("button", { onClick: exportWorkflow, title: "Export workflow", style: { display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, border: "1px solid #2a2a30", background: "#141416", color: "#9ca3af", fontSize: 12, fontWeight: 600, cursor: "pointer" }, children: "\uD83D\uDCE4 Export" }), _jsx("button", { onClick: handleRun, disabled: isRunning || nodes.length === 0, title: "Run All (topological order)", style: { display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 8, border: "none", background: isRunning ? "#2a2a30" : "#c026d3", color: isRunning ? "#6b6b75" : "#fff", fontSize: 12, fontWeight: 700, cursor: isRunning ? "not-allowed" : "pointer" }, children: isRunning ? "⏳ Running..." : "▶ Run All" })] }), currentView === "assets" ? (_jsxs("div", { style: { flex: 1, overflow: "auto", padding: 32 }, children: [_jsx("h2", { style: { fontSize: 20, fontWeight: 600, color: "#1a1a1a", marginBottom: 20 }, children: "All Assets" }), assets.length === 0 && _jsx("div", { style: { fontSize: 14, color: "#9ca3af", textAlign: "center", padding: 60 }, children: "No assets yet. Generate some images or videos!" }), _jsx("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 16 }, children: assets.map((asset, i) => (_jsxs("div", { style: { borderRadius: 12, overflow: "hidden", border: "1px solid #e8e8eb", background: "#fff" }, children: [asset.type === "video" ? (_jsx("video", { src: asset.url, style: { width: "100%", height: 160, objectFit: "cover" }, controls: true, muted: true })) : (_jsx("img", { src: asset.url, alt: "", style: { width: "100%", height: 160, objectFit: "cover" } })), _jsxs("div", { style: { padding: "10px 12px" }, children: [_jsx("div", { style: { fontSize: 11, fontWeight: 600, color: "#1a1a1a" }, children: asset.model }), _jsx("div", { style: { fontSize: 10, color: "#9ca3af", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: asset.prompt }), _jsxs("div", { style: { display: "flex", gap: 6, marginTop: 8 }, children: [_jsx("a", { href: asset.url, download: true, target: "_blank", rel: "noopener", style: { padding: "4px 10px", background: "#c026d3", color: "#fff", borderRadius: 6, fontSize: 10, fontWeight: 600, textDecoration: "none" }, children: "Download" }), _jsx("span", { style: { padding: "4px 8px", background: "#f5f5f7", borderRadius: 6, fontSize: 10, color: "#6b7280" }, children: asset.type })] })] })] }, i))) })] })) : (_jsx("div", { style: { flex: 1 }, children: _jsxs(ReactFlow, { nodes: nodes, edges: edges, onNodesChange: onNodesChange, onEdgesChange: onEdgesChange, onConnect: onConnect, nodeTypes: nodeTypes, fitView: true, style: { background: "#f0f0f2" }, defaultEdgeOptions: { animated: isRunning, style: { stroke: "#d1d5db", strokeWidth: 1.5 }, type: "smoothstep" }, children: [_jsx(Background, { variant: BackgroundVariant.Dots, color: "#c0c0c6", gap: 28, size: 1.2 }), _jsx(Controls, { style: { background: "#ffffff", border: "1px solid #e8e8eb", borderRadius: 10, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" } }), _jsx(MiniMap, { style: { background: "#ffffff", borderRadius: 10, border: "1px solid #e8e8eb", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }, nodeColor: "#d1d5db", maskColor: "rgba(240,240,242,0.8)" })] }) }))] })), _jsx(ToastContainer, {}), _jsx("style", { children: `
+        @keyframes slideIn { from { transform: translateX(100px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .react-flow__edge.animated path { stroke-dasharray: 5; animation: flowDash 0.5s linear infinite; }
+        @keyframes flowDash { to { stroke-dashoffset: -10; } }
+        @media (max-width: 768px) {
+          nav { width: 44px !important; }
+          nav button { width: 32px !important; height: 32px !important; }
+          aside { position: fixed !important; left: 44px !important; top: 0 !important; bottom: 0 !important; width: calc(100vw - 44px) !important; z-index: 100 !important; }
+          .react-flow__node { touch-action: none; }
+        }
+        @media (max-width: 640px) {
+          nav span, nav div:first-child { font-size: 10px !important; }
+        }
+      ` })] }));
 }

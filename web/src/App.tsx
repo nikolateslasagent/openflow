@@ -45,6 +45,7 @@ import { useNotifications, NotificationBell, NotificationPanel } from "./Notific
 import { useGenerationQueue, QueuePanel } from "./GenerationQueue";
 import { KeyboardShortcutsModal } from "./KeyboardShortcuts";
 import { parseAgentParams, APIDocsPanel } from "./AgentAPI";
+import { AnalyticsDashboard, UsageQuotasSection, ModelComparisonPanel, WorkflowStatsInline, trackWorkflowRun, incrementDailyUsage } from "./Analytics";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -1066,25 +1067,10 @@ function Dashboard({ onNewProject, onOpenCanvas, onLoadTemplate, assets }: {
           </div>
         </div>
 
-        {/* Quick Stats */}
+        {/* Analytics Dashboard */}
         <div style={{ marginBottom: 40 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 600, color: "#1a1a1a", marginBottom: 16 }}>Quick Stats</h2>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 14 }}>
-            {[
-              { label: "Total Generations", value: assets.length, icon: "⚡", gradient: "linear-gradient(135deg, #c026d3, #ec4899)" },
-              { label: "Favorite Model", value: assets.length > 0 ? (assets.reduce((acc, a) => { acc[a.model] = (acc[a.model] || 0) + 1; return acc; }, {} as Record<string, number>), Object.entries(assets.reduce((acc, a) => { acc[a.model] = (acc[a.model] || 0) + 1; return acc; }, {} as Record<string, number>)).sort((a, b) => b[1] - a[1])[0]?.[0] || "—") : "—", icon: "⭐", gradient: "linear-gradient(135deg, #f59e0b, #f97316)" },
-              { label: "Avg Gen Time", value: "~12s", icon: "⏱", gradient: "linear-gradient(135deg, #6366f1, #8b5cf6)" },
-              { label: "Models Used", value: new Set(assets.map(a => a.model)).size || 0, icon: "🤖", gradient: "linear-gradient(135deg, #14b8a6, #06b6d4)" },
-            ].map((stat) => (
-              <div key={stat.label} style={{ padding: "20px", background: "#ffffff", border: "1px solid #e8e8eb", borderRadius: 16, transition: "all 0.2s", cursor: "default" }}
-                onMouseOver={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 8px 20px rgba(0,0,0,0.06)"; }}
-                onMouseOut={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "none"; }}>
-                <div style={{ width: 36, height: 36, borderRadius: 10, background: stat.gradient, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, marginBottom: 10 }}>{stat.icon}</div>
-                <div style={{ fontSize: 22, fontWeight: 700, color: "#1a1a1a" }}>{stat.value}</div>
-                <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>{stat.label}</div>
-              </div>
-            ))}
-          </div>
+          <h2 style={{ fontSize: 18, fontWeight: 600, color: "#1a1a1a", marginBottom: 16 }}>📊 Analytics & Insights</h2>
+          <AnalyticsDashboard assets={assets} />
         </div>
 
         {/* Recent Activity Feed */}
@@ -1846,7 +1832,11 @@ export default function App() {
 
     setIsRunning(false);
     setExecutionProgress(null);
-    if (!cancelRef.current) addToast("All nodes complete!", "success");
+    if (!cancelRef.current) {
+      addToast("All nodes complete!", "success");
+      trackWorkflowRun(projectName || "untitled", 0, true);
+      incrementDailyUsage();
+    }
   }, [nodes, edges, falApiKey, runSingleNode, addToast, pushUndo, setNodeData, updateNodeValue, setNodes]);
 
   // Keyboard shortcuts
@@ -2273,6 +2263,12 @@ export default function App() {
           style={{ width: 38, height: 38, borderRadius: 10, border: "none", background: activePanel === "assets" ? "#1e1e22" : "transparent", color: activePanel === "assets" ? "#c026d3" : "#6b6b75", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }}
           dangerouslySetInnerHTML={{ __html: SVG_ICONS.assets }} />
 
+        {/* Compare Models */}
+        <button title="Compare Models" onClick={() => { setActivePanel(activePanel === "compare" ? null : "compare"); }}
+          style={{ width: 38, height: 38, borderRadius: 10, border: "none", background: activePanel === "compare" ? "#1e1e22" : "transparent", color: activePanel === "compare" ? "#c026d3" : "#6b6b75", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4, fontSize: 18 }}>
+          ⚖️
+        </button>
+
         {/* Chat */}
         <button title="AI Chat" onClick={() => { setActivePanel(activePanel === "chat" ? null : "chat"); }}
           style={{ width: 38, height: 38, borderRadius: 10, border: "none", background: activePanel === "chat" ? "#1e1e22" : "transparent", color: activePanel === "chat" ? "#c026d3" : "#6b6b75", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }}
@@ -2387,6 +2383,8 @@ export default function App() {
               setCurrentView("canvas");
               addToast(`Loaded "${template.title}" — ${template.nodeCount} nodes`, "success");
             }} />
+          ) : activePanel === "compare" ? (
+            <ModelComparisonPanel />
           ) : activePanel === "models" ? (
             <ModelManagerPanel onCreateNode={(defId, modelKey) => {
               const def = NODE_DEFS.find(d => d.id === defId);
@@ -2442,6 +2440,7 @@ export default function App() {
                       onMouseOut={e => { e.currentTarget.style.background = "#f5f5f7"; }}>
                       {p.name}
                       <div style={{ fontSize: 9, color: "#9ca3af", marginTop: 2 }}>{p.updated_at?.slice(0, 16)}</div>
+                      <WorkflowStatsInline name={p.name} />
                     </div>
                   ))}
                   <button onClick={() => { setAuthToken(""); localStorage.removeItem("openflow_token"); }}
@@ -2513,9 +2512,11 @@ export default function App() {
               </button>
               <div style={{ fontSize: 10, color: "#9ca3af", marginBottom: 6 }}>{loadCustomNodes().length} custom nodes created</div>
 
+              <UsageQuotasSection />
+
               <div style={{ fontSize: 10, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.8px", marginTop: 16, marginBottom: 6 }}>About</div>
               <div style={{ fontSize: 11, color: "#6b7280", lineHeight: 1.8 }}>
-                OpenFlow v10.0 — Sprint 10<br />
+                OpenFlow v13.0 — Sprint 13<br />
                 <a href="https://github.com/nikolateslasagent/openflow" target="_blank" rel="noopener" style={{ color: "#c026d3", textDecoration: "none" }}>GitHub</a> · <a href="https://openflow-docs.vercel.app" target="_blank" rel="noopener" style={{ color: "#c026d3", textDecoration: "none" }}>Docs</a>
               </div>
 

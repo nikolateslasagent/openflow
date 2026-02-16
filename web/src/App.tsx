@@ -4,7 +4,7 @@
  * Sprint 2: Dashboard, Asset Manager, Chat, Mini-Apps, New Node Types
  */
 
-import { useCallback, useMemo, useState, useRef, useEffect, type DragEvent } from "react";
+import React, { useCallback, useMemo, useState, useRef, useEffect, type DragEvent } from "react";
 import {
   ReactFlow,
   Background,
@@ -28,6 +28,10 @@ import { saveTrainingRecord, getTrainingDataCount, exportTrainingData, getTraini
 import { useToast } from "./Toast";
 import { GalleryView } from "./GalleryView";
 import { TutorialOverlay, shouldShowTutorial } from "./TutorialOverlay";
+import { ImageEditor } from "./ImageEditor";
+import { VideoPreview } from "./VideoPreview";
+import { saveVersion, VersionDropdown, type NodeVersion } from "./VersionHistory";
+import { InteractiveOnboarding, shouldShowOnboarding } from "./InteractiveOnboarding";
 import { encodeWorkflowToUrl, decodeWorkflowFromHash } from "./WorkflowSharing";
 import { StoryboardView } from "./Storyboard";
 import TimelineEditor from "./TimelineEditor";
@@ -706,6 +710,12 @@ function FlowNode({ data, selected }: NodeProps) {
           {resolution && <div>◫ {resolution}</div>}
           <div>◎ {model}</div>
           <div style={{ color: "#9ca3af", fontSize: 11, marginTop: 4, fontStyle: "italic" }}>{prompt.length > 60 ? prompt.slice(0, 60) + "..." : prompt}</div>
+          <div style={{ marginTop: 6 }}>
+            <VersionDropdown nodeId={data.nodeId as string || "unknown"} onRestore={(v) => {
+              const onRestoreVersion = data.onRestoreVersion as ((url: string) => void) | undefined;
+              if (onRestoreVersion) onRestoreVersion(v.outputUrl);
+            }} onPreview={onPreview} />
+          </div>
         </div>
         <div style={{ padding: "0 18px 16px", cursor: "pointer" }} onClick={() => { const isVid = def.category === "video" || def.id === "video.img_to_video"; if (onPreview && outputUrl) onPreview(outputUrl, isVid ? "video" : "image"); }}>
           {def.category === "video" || def.id === "video.img_to_video" ? (
@@ -793,7 +803,8 @@ function FlowNode({ data, selected }: NodeProps) {
   );
 }
 
-const nodeTypes = { flowNode: FlowNode };
+const MemoFlowNode = React.memo(FlowNode);
+const nodeTypes = { flowNode: MemoFlowNode };
 
 // ---------------------------------------------------------------------------
 // Landing Page
@@ -1409,12 +1420,13 @@ export default function App() {
         type: "flowNode",
         position: { x: 100 + Math.random() * 400, y: 50 + Math.random() * 300 },
         data: {
-          def, values: defaults,
+          def, values: defaults, nodeId,
           onChange: (key: string, val: unknown) => updateNodeValue(nodeId, key, val),
           onRun: () => runSingleNodeRef.current(nodeId),
           onDelete: () => { pushUndo(); setNodes((nds: Node[]) => nds.filter((n: Node) => n.id !== nodeId)); },
           onPreview: (url: string, type: "image" | "video") => setPreviewModal({ url, type }),
           onSavePreset: () => saveNodeAsPreset(nodeId),
+          onRestoreVersion: (url: string) => setNodeData(nodeId, { outputUrl: url, status: "done" }),
         },
       };
       setNodes((nds) => [...nds, newNode]);
@@ -1469,6 +1481,7 @@ export default function App() {
         const genTime = Date.now() - startTime;
         // Store text output as outputUrl for data flow (text nodes pass text through outputUrl)
         setNodeData(nodeId, { status: "done", outputUrl: reply, llmResponse: reply });
+        saveVersion(nodeId, reply, "text", (values.prompt as string) || "", modelKey);
         addToast(`LLM responded! (${(genTime / 1000).toFixed(1)}s)`, "success");
       } catch (err: unknown) {
         setNodeData(nodeId, { status: `Error: ${String(err)}` });
@@ -1486,6 +1499,7 @@ export default function App() {
       const genTime = Date.now() - startTime;
       setNodeData(nodeId, { status: "done", outputUrl: result.url });
       const isVideo = def.category === "video" || def.id === "video.img_to_video";
+      saveVersion(nodeId, result.url, isVideo ? "video" : "image", (values.prompt as string) || "", modelKey);
       saveAsset({ url: result.url, type: isVideo ? "video" : "image", prompt: (values.prompt as string) || (values.text as string) || "", model: modelKey, timestamp: Date.now() });
       saveTrainingRecord({ timestamp: Date.now(), model: modelKey, prompt: (values.prompt as string) || "", params: values, output_url: result.url, generation_time_ms: genTime, user_id: "local" });
       refreshAssets();
@@ -2139,7 +2153,7 @@ export default function App() {
 
       {/* Flyout panel */}
       {activePanel && (
-        <aside style={{ width: 280, background: "#ffffff", borderRight: "1px solid #ebebee", overflowY: "auto", flexShrink: 0, zIndex: 15, boxShadow: "4px 0 16px rgba(0,0,0,0.03)", display: "flex", flexDirection: "column", animation: "slideFlyout 0.2s ease-out" }}>
+        <aside data-onboarding="toolbar" style={{ width: 280, background: "#ffffff", borderRight: "1px solid #ebebee", overflowY: "auto", flexShrink: 0, zIndex: 15, boxShadow: "4px 0 16px rgba(0,0,0,0.03)", display: "flex", flexDirection: "column", animation: "slideFlyout 0.2s ease-out" }}>
           {activePanel === "api" ? (
             <APIDocsPanel />
           ) : activePanel === "prompts" ? (
@@ -2666,21 +2680,23 @@ export default function App() {
       )}
       {/* Batch results overlay */}
       <BatchResultsGrid jobs={batchJobs} />
-      {/* Full-size preview modal */}
-      {previewModal && (
-        <div onClick={() => setPreviewModal(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 40, cursor: "pointer" }}>
-          <div onClick={(e) => e.stopPropagation()} style={{ maxWidth: "90vw", maxHeight: "90vh", position: "relative" }}>
-            <button onClick={() => setPreviewModal(null)} style={{ position: "absolute", top: -12, right: -12, width: 32, height: 32, borderRadius: "50%", background: "#fff", border: "none", fontSize: 16, cursor: "pointer", zIndex: 1, boxShadow: "0 2px 8px rgba(0,0,0,0.3)" }}>✕</button>
-            {previewModal.type === "video" ? (
-              <video src={previewModal.url} controls autoPlay style={{ maxWidth: "90vw", maxHeight: "85vh", borderRadius: 12 }} />
-            ) : (
-              <img src={previewModal.url} alt="preview" style={{ maxWidth: "90vw", maxHeight: "85vh", borderRadius: 12, objectFit: "contain" }} />
-            )}
-            <div style={{ textAlign: "center", marginTop: 12 }}>
-              <a href={previewModal.url} download target="_blank" rel="noopener" style={{ padding: "8px 20px", background: "#c026d3", color: "#fff", borderRadius: 8, fontSize: 13, fontWeight: 600, textDecoration: "none" }}>Download</a>
-            </div>
-          </div>
-        </div>
+      {/* Full-size preview modal — Image Editor or Video Preview */}
+      {previewModal && previewModal.type === "image" && (
+        <ImageEditor
+          imageUrl={previewModal.url}
+          onClose={() => setPreviewModal(null)}
+          onUseAsInput={(dataUrl) => {
+            const def = NODE_DEFS.find(d => d.id === "image.input");
+            if (def) { addNodeWithHandler(def, { image_url: dataUrl }); setCurrentView("canvas"); addToast("Added edited image as Input node!", "success"); }
+            setPreviewModal(null);
+          }}
+        />
+      )}
+      {previewModal && previewModal.type === "video" && (
+        <VideoPreview
+          videoUrl={previewModal.url}
+          onClose={() => setPreviewModal(null)}
+        />
       )}
       {showGallery && (
         <GalleryView assets={assets} onClose={() => setShowGallery(false)} onUseAsInput={(url) => {
@@ -2688,7 +2704,7 @@ export default function App() {
           if (def) { addNodeWithHandler(def, { image_url: url }); setCurrentView("canvas"); addToast("Added as Image Input node!", "success"); }
         }} />
       )}
-      {showTutorial && <TutorialOverlay onDismiss={() => setShowTutorial(false)} />}
+      {showTutorial && <InteractiveOnboarding onDismiss={() => setShowTutorial(false)} />}
       {showShortcuts && <KeyboardShortcutsModal onClose={() => setShowShortcuts(false)} />}
       {showNotifPanel && (
         <NotificationPanel

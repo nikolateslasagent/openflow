@@ -2969,6 +2969,8 @@ export default function App() {
       <style>{`
         @keyframes slideIn { from { transform: translateX(100px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         @keyframes slideFlyout { from { transform: translateX(-20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        button:focus-visible { outline: 2px solid #c026d3; outline-offset: 2px; }
+        nav[aria-label="Main toolbar"] button:focus-visible { outline-offset: -2px; border-radius: 10px; }
         @keyframes nodeAppear { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         @keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgba(192, 38, 211, 0.4); } 70% { box-shadow: 0 0 0 8px rgba(192, 38, 211, 0); } 100% { box-shadow: 0 0 0 0 rgba(192, 38, 211, 0); } }
         .react-flow__node { animation: nodeAppear 0.2s ease-out; }

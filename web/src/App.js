@@ -1982,6 +1982,10 @@ export default function App() {
                 } })), showTutorial && _jsx(InteractiveOnboarding, { onDismiss: () => setShowTutorial(false) }), showShortcuts && _jsx(KeyboardShortcutsModal, { onClose: () => setShowShortcuts(false) }), showNotifPanel && (_jsx(NotificationPanel, { notifications: notifications, onClose: () => setShowNotifPanel(false), onMarkAllRead: () => { markAllRead(); }, onClear: () => { clearNotifications(); setShowNotifPanel(false); } })), _jsx(QueuePanel, { queue: generationQueue.queue, paused: generationQueue.paused, onPauseToggle: () => generationQueue.setPaused(p => !p), onTogglePriority: generationQueue.togglePriority, onRemove: generationQueue.removeFromQueue, onReorder: generationQueue.reorder, onClearCompleted: generationQueue.clearCompleted }), _jsx("div", { style: { position: "fixed", bottom: 12, left: 68, zIndex: 10, fontSize: 10, fontWeight: 600, color: "var(--of-muted-text, #9ca3af)", background: "var(--of-card-bg, #ffffff)", padding: "4px 10px", borderRadius: 50, border: "1px solid var(--of-card-border, #e8e8eb)", opacity: 0.7, pointerEvents: "none" }, children: "OpenFlow v1.0 \u2014 Open Source" }), _jsx(ToastContainer, {}), _jsx("style", { children: `
         @keyframes slideIn { from { transform: translateX(100px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         @keyframes slideFlyout { from { transform: translateX(-20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes nodeAppear { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        @keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgba(192, 38, 211, 0.4); } 70% { box-shadow: 0 0 0 8px rgba(192, 38, 211, 0); } 100% { box-shadow: 0 0 0 0 rgba(192, 38, 211, 0); } }
+        .react-flow__node { animation: nodeAppear 0.2s ease-out; }
+        .react-flow__node.selected { box-shadow: 0 0 0 2px #c026d3 !important; border-radius: 14px; }
         .react-flow__edge.animated path { stroke-dasharray: 5; animation: flowDash 0.5s linear infinite; }
         @keyframes flowDash { to { stroke-dashoffset: -10; } }
         @media (max-width: 768px) {

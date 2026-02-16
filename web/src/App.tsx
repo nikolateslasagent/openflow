@@ -2969,6 +2969,10 @@ export default function App() {
       <style>{`
         @keyframes slideIn { from { transform: translateX(100px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         @keyframes slideFlyout { from { transform: translateX(-20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes nodeAppear { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        @keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgba(192, 38, 211, 0.4); } 70% { box-shadow: 0 0 0 8px rgba(192, 38, 211, 0); } 100% { box-shadow: 0 0 0 0 rgba(192, 38, 211, 0); } }
+        .react-flow__node { animation: nodeAppear 0.2s ease-out; }
+        .react-flow__node.selected { box-shadow: 0 0 0 2px #c026d3 !important; border-radius: 14px; }
         .react-flow__edge.animated path { stroke-dasharray: 5; animation: flowDash 0.5s linear infinite; }
         @keyframes flowDash { to { stroke-dashoffset: -10; } }
         @media (max-width: 768px) {

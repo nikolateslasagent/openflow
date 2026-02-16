@@ -95,8 +95,31 @@ export default function TimelineEditor({ assets, onExportVideo }: TimelineEditor
     setClips(prev => prev.map(c => c.id === id ? { ...c, text, label: text.slice(0, 30) } : c));
   };
 
+  const [manualUrl, setManualUrl] = useState("");
   const videoAssets = assets.filter(a => a.type === "video");
+  const imageAssets = assets.filter(a => a.type === "image");
   const audioAssets = assets.filter(a => a.type === "audio");
+
+  const addManualClip = (trackType: string) => {
+    if (!manualUrl.trim()) return;
+    addClipFromAsset({ url: manualUrl.trim(), type: trackType === "Audio" ? "audio" : "video", prompt: "Manual clip" }, trackType);
+    setManualUrl("");
+  };
+
+  const addImageAsClip = (asset: { url: string; type: string; prompt: string }) => {
+    const existingOnTrack = clips.filter(c => c.type === "video");
+    const startTime = existingOnTrack.length > 0 ? Math.max(...existingOnTrack.map(c => c.startTime + c.duration)) : 0;
+    idCounter.current++;
+    setClips(prev => [...prev, {
+      id: `clip-${idCounter.current}`,
+      type: "video",
+      url: asset.url,
+      label: asset.prompt?.slice(0, 30) || "Image",
+      startTime,
+      duration: 3,
+      thumbnail: asset.url,
+    }]);
+  };
 
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", background: "#0e0e10", color: "#e0e0e5", overflow: "hidden" }}>
@@ -120,7 +143,14 @@ export default function TimelineEditor({ assets, onExportVideo }: TimelineEditor
         {/* Asset pool sidebar */}
         <div style={{ width: 220, borderRight: "1px solid #1e1e22", overflow: "auto", padding: 12 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: "#6b6b75", textTransform: "uppercase", marginBottom: 8 }}>Video Clips</div>
-          {videoAssets.length === 0 && <div style={{ fontSize: 11, color: "#4a4a50", padding: 8 }}>No video assets yet</div>}
+          {/* Manual URL input */}
+          <div style={{ marginBottom: 10 }}>
+            <input value={manualUrl} onChange={e => setManualUrl(e.target.value)} placeholder="Paste video/image URL..."
+              style={{ width: "100%", padding: "6px 8px", borderRadius: 6, border: "1px solid #2a2a30", background: "#141416", color: "#e0e0e5", fontSize: 10, marginBottom: 4 }} />
+            <button onClick={() => addManualClip("Video")} disabled={!manualUrl.trim()}
+              style={{ width: "100%", padding: "5px 0", borderRadius: 6, border: "none", background: manualUrl.trim() ? "#c026d3" : "#2a2a30", color: "#fff", fontSize: 10, fontWeight: 600, cursor: manualUrl.trim() ? "pointer" : "default", opacity: manualUrl.trim() ? 1 : 0.4 }}>+ Add to Timeline</button>
+          </div>
+          {videoAssets.length === 0 && imageAssets.length === 0 && <div style={{ fontSize: 11, color: "#4a4a50", padding: 8 }}>Generate images or videos on Canvas, then add them here</div>}
           {videoAssets.map((a, i) => (
             <div key={i} draggable onDragStart={(e) => e.dataTransfer.setData("asset-index", String(i))}
               style={{ padding: 8, background: "#141416", borderRadius: 8, marginBottom: 6, cursor: "grab", border: "1px solid #2a2a30" }}>
@@ -129,6 +159,18 @@ export default function TimelineEditor({ assets, onExportVideo }: TimelineEditor
               <button onClick={() => addClipFromAsset(a, "Video")} style={{ marginTop: 4, width: "100%", padding: "4px 0", borderRadius: 6, border: "1px solid #2a2a30", background: "transparent", color: "#c026d3", fontSize: 10, fontWeight: 600, cursor: "pointer" }}>+ Add to Timeline</button>
             </div>
           ))}
+          {imageAssets.length > 0 && (
+            <>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#6b6b75", textTransform: "uppercase", marginTop: 16, marginBottom: 8 }}>Images (as stills)</div>
+              {imageAssets.slice(0, 10).map((a, i) => (
+                <div key={i} style={{ padding: 8, background: "#141416", borderRadius: 8, marginBottom: 6, border: "1px solid #2a2a30" }}>
+                  <img src={a.url} style={{ width: "100%", height: 50, objectFit: "cover", borderRadius: 6 }} alt="" />
+                  <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.prompt?.slice(0, 40)}</div>
+                  <button onClick={() => addImageAsClip(a)} style={{ marginTop: 4, width: "100%", padding: "4px 0", borderRadius: 6, border: "1px solid #2a2a30", background: "transparent", color: "#c026d3", fontSize: 10, fontWeight: 600, cursor: "pointer" }}>+ Add as 3s Still</button>
+                </div>
+              ))}
+            </>
+          )}
           {audioAssets.length > 0 && (
             <>
               <div style={{ fontSize: 11, fontWeight: 700, color: "#6b6b75", textTransform: "uppercase", marginTop: 16, marginBottom: 8 }}>Audio</div>

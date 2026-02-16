@@ -9,8 +9,7 @@
  * - Output preview panel
  */
 
-import { useCallback, useMemo, useState, useRef, useEffect, type DragEvent } from "react";
-import * as api from "./api";
+import { useCallback, useMemo, useState, useRef, type DragEvent } from "react";
 import {
   ReactFlow,
   Background,
@@ -214,6 +213,9 @@ const SVG_ICONS: Record<string, string> = {
   output: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="21.17" y1="8" x2="12" y2="8"/><line x1="3.95" y1="6.06" x2="8.54" y2="14"/><line x1="10.88" y1="21.94" x2="15.46" y2="14"/></svg>`,
   settings: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
   run: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>`,
+  scenes: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2"/><line x1="2" y1="8" x2="22" y2="8"/><line x1="8" y1="2" x2="8" y2="22"/></svg>`,
+  save: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>`,
+  user: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
 };
 
 // Node-level outlined icons
@@ -546,192 +548,7 @@ function FlowNode({ data, selected }: NodeProps) {
 const nodeTypes = { flowNode: FlowNode };
 
 // ---------------------------------------------------------------------------
-// App
-// ---------------------------------------------------------------------------
-
-// ---------------------------------------------------------------------------
-// Auth Modal
-// ---------------------------------------------------------------------------
-
-function AuthModal({ onClose, onAuth }: { onClose: () => void; onAuth: () => void }) {
-  const [mode, setMode] = useState<"login" | "signup">("login");
-  const [email, setEmail] = useState("");
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const handleSubmit = async () => {
-    setError("");
-    setLoading(true);
-    try {
-      if (mode === "signup") {
-        await api.signup(email, username, password);
-      } else {
-        await api.login(email, password);
-      }
-      onAuth();
-    } catch (e: unknown) {
-      setError(String((e as Error).message));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div style={{
-      position: "fixed", inset: 0, zIndex: 1000,
-      background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)",
-      display: "flex", alignItems: "center", justifyContent: "center",
-    }} onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} style={{
-        background: "#fff", borderRadius: 16, padding: 32, width: 380,
-        boxShadow: "0 25px 80px rgba(0,0,0,0.3)",
-        fontFamily: "'Inter', -apple-system, sans-serif",
-      }}>
-        <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 4 }}>
-          {mode === "login" ? "Welcome back" : "Create account"}
-        </div>
-        <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 24 }}>
-          {mode === "login" ? "Sign in to save your workflows" : "Start creating with OpenFlow"}
-        </div>
-
-        {error && <div style={{ background: "#fef2f2", color: "#991b1b", padding: "8px 12px", borderRadius: 8, fontSize: 12, marginBottom: 12 }}>{error}</div>}
-
-        <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)}
-          style={{ width: "100%", padding: "10px 14px", borderRadius: 10, border: "1px solid #e5e7eb", fontSize: 14, marginBottom: 10, outline: "none", boxSizing: "border-box" }} />
-
-        {mode === "signup" && (
-          <input type="text" placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)}
-            style={{ width: "100%", padding: "10px 14px", borderRadius: 10, border: "1px solid #e5e7eb", fontSize: 14, marginBottom: 10, outline: "none", boxSizing: "border-box" }} />
-        )}
-
-        <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-          style={{ width: "100%", padding: "10px 14px", borderRadius: 10, border: "1px solid #e5e7eb", fontSize: 14, marginBottom: 16, outline: "none", boxSizing: "border-box" }} />
-
-        <button onClick={handleSubmit} disabled={loading} style={{
-          width: "100%", padding: "12px", borderRadius: 10, border: "none",
-          background: "#c026d3", color: "#fff", fontSize: 14, fontWeight: 600,
-          cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1,
-        }}>
-          {loading ? "..." : mode === "login" ? "Sign in" : "Create account"}
-        </button>
-
-        <div style={{ textAlign: "center", marginTop: 16, fontSize: 13, color: "#6b7280" }}>
-          {mode === "login" ? "Don't have an account? " : "Already have an account? "}
-          <button onClick={() => { setMode(mode === "login" ? "signup" : "login"); setError(""); }}
-            style={{ background: "none", border: "none", color: "#c026d3", fontWeight: 600, cursor: "pointer", fontSize: 13 }}>
-            {mode === "login" ? "Sign up" : "Sign in"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Scene Builder Panel
-// ---------------------------------------------------------------------------
-
-function SceneBuilderPanel({ onAddScenes }: { onAddScenes: (scenes: Array<{title: string; prompt: string; type: string}>) => void }) {
-  const [story, setStory] = useState("");
-  const [numScenes, setNumScenes] = useState(4);
-  const [style, setStyle] = useState("cinematic");
-  const [loading, setLoading] = useState(false);
-  const [scenes, setScenes] = useState<Array<{title: string; prompt: string; type: string}>>([]);
-
-  const handleBuild = async () => {
-    if (!story.trim()) return;
-    setLoading(true);
-    try {
-      if (api.isLoggedIn()) {
-        const data = await api.buildScenes(story, numScenes, style);
-        setScenes(data.scenes);
-      } else {
-        // Offline fallback
-        const s = [];
-        for (let i = 0; i < numScenes; i++) {
-          s.push({
-            title: `Scene ${i + 1}`,
-            prompt: `${style} style, ${story}. Scene ${i + 1} of ${numScenes}.`,
-            type: i % 2 === 0 ? "video" : "image",
-          });
-        }
-        setScenes(s);
-      }
-    } catch {
-      // Fallback
-      const s = [];
-      for (let i = 0; i < numScenes; i++) {
-        s.push({
-          title: `Scene ${i + 1}`,
-          prompt: `${style} style, ${story}. Scene ${i + 1} of ${numScenes}.`,
-          type: i % 2 === 0 ? "video" : "image",
-        });
-      }
-      setScenes(s);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div style={{ padding: 16 }}>
-      <div style={{ fontSize: 13, fontWeight: 600, color: "#1a1a1a", marginBottom: 12 }}>🎬 Scene Builder</div>
-      <div style={{ fontSize: 10, fontWeight: 500, color: "#9ca3af", marginBottom: 4 }}>Describe your story</div>
-      <textarea value={story} onChange={(e) => setStory(e.target.value)} placeholder="A warrior journeys through a mystical forest to find an ancient temple..."
-        rows={4} style={{ width: "100%", background: "#f5f5f7", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, resize: "vertical", outline: "none", boxSizing: "border-box", fontFamily: "inherit" }} />
-
-      <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 10, color: "#9ca3af", marginBottom: 2 }}>Scenes</div>
-          <select value={numScenes} onChange={(e) => setNumScenes(Number(e.target.value))}
-            style={{ width: "100%", padding: "6px 8px", borderRadius: 6, border: "1px solid #e5e7eb", fontSize: 11 }}>
-            {[2, 3, 4, 5, 6, 8].map((n) => <option key={n} value={n}>{n}</option>)}
-          </select>
-        </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 10, color: "#9ca3af", marginBottom: 2 }}>Style</div>
-          <select value={style} onChange={(e) => setStyle(e.target.value)}
-            style={{ width: "100%", padding: "6px 8px", borderRadius: 6, border: "1px solid #e5e7eb", fontSize: 11 }}>
-            {["cinematic", "anime", "photorealistic", "fantasy", "sci-fi", "noir", "watercolor"].map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
-        </div>
-      </div>
-
-      <button onClick={handleBuild} disabled={loading || !story.trim()} style={{
-        width: "100%", padding: "8px", borderRadius: 8, border: "none",
-        background: loading ? "#e5e7eb" : "#c026d3", color: loading ? "#9ca3af" : "#fff",
-        fontSize: 12, fontWeight: 600, cursor: loading ? "not-allowed" : "pointer", marginTop: 10,
-      }}>
-        {loading ? "Building scenes..." : "Build Scenes ✦"}
-      </button>
-
-      {scenes.length > 0 && (
-        <div style={{ marginTop: 12 }}>
-          <div style={{ fontSize: 10, fontWeight: 600, color: "#6b7280", marginBottom: 6 }}>PREVIEW</div>
-          {scenes.map((s, i) => (
-            <div key={i} style={{ background: "#f5f5f7", borderRadius: 8, padding: "8px 10px", marginBottom: 6 }}>
-              <div style={{ fontSize: 11, fontWeight: 600, color: "#1a1a1a" }}>{s.title}</div>
-              <div style={{ fontSize: 10, color: "#6b7280", marginTop: 2 }}>{s.prompt.slice(0, 80)}...</div>
-              <div style={{ fontSize: 9, color: "#c026d3", marginTop: 2 }}>{s.type === "video" ? "🎬 Video" : "🖼️ Image"}</div>
-            </div>
-          ))}
-          <button onClick={() => onAddScenes(scenes)} style={{
-            width: "100%", padding: "8px", borderRadius: 8, border: "1px solid #c026d3",
-            background: "transparent", color: "#c026d3", fontSize: 12, fontWeight: 600, cursor: "pointer", marginTop: 4,
-          }}>
-            Add to Canvas →
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Landing Page
+// App (old AuthModal/SceneBuilderPanel removed — functionality moved inline)
 // ---------------------------------------------------------------------------
 
 function LandingPage({ onEnter }: { onEnter: () => void }) {
@@ -890,34 +707,11 @@ function LandingPage({ onEnter }: { onEnter: () => void }) {
 
 export default function App() {
   const [showLanding, setShowLanding] = useState(true);
-  const [showAuth, setShowAuth] = useState(false);
-  const [user, setUser] = useState(api.getUser());
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [falApiKey, setFalApiKey] = useState(() => localStorage.getItem("openflow_fal_key") || "148ec4ac-aafc-416b-9213-74cacdeefe5e:0dc2faa972e5762ba57fc758b2fd99e8");
-  const [projects, setProjects] = useState<Array<{id: string; name: string}>>([]);
-  const [currentProject, setCurrentProject] = useState<string | null>(null);
-  const [workflows, setWorkflows] = useState<Array<{id: string; name: string; data: object}>>([]);
-  const [currentWorkflow, setCurrentWorkflow] = useState<string | null>(null);
   const idCounter = useRef(0);
-
-  // Load projects when logged in
-  useEffect(() => {
-    if (user && api.isLoggedIn()) {
-      api.listProjects().then((p) => {
-        setProjects(p);
-        if (p.length > 0 && !currentProject) setCurrentProject(p[0].id);
-      }).catch(() => {});
-    }
-  }, [user]);
-
-  // Load workflows when project selected
-  useEffect(() => {
-    if (currentProject && api.isLoggedIn()) {
-      api.listWorkflows(currentProject).then(setWorkflows).catch(() => {});
-    }
-  }, [currentProject]);
 
   const grouped = useMemo(() => groupByCategory(NODE_DEFS), []);
 

@@ -170,6 +170,9 @@ const SVG_ICONS = {
     output: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="21.17" y1="8" x2="12" y2="8"/><line x1="3.95" y1="6.06" x2="8.54" y2="14"/><line x1="10.88" y1="21.94" x2="15.46" y2="14"/></svg>`,
     settings: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
     run: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>`,
+    scenes: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2"/><line x1="2" y1="8" x2="22" y2="8"/><line x1="8" y1="2" x2="8" y2="22"/></svg>`,
+    save: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>`,
+    user: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
 };
 // Node-level outlined icons
 const NODE_ICONS = {
@@ -360,10 +363,7 @@ function FlowNode({ data, selected }) {
 }
 const nodeTypes = { flowNode: FlowNode };
 // ---------------------------------------------------------------------------
-// App
-// ---------------------------------------------------------------------------
-// ---------------------------------------------------------------------------
-// Landing Page
+// App (old AuthModal/SceneBuilderPanel removed — functionality moved inline)
 // ---------------------------------------------------------------------------
 function LandingPage({ onEnter }) {
     return (_jsxs("div", { style: {
@@ -597,6 +597,140 @@ export default function App() {
     }, []);
     const [activePanel, setActivePanel] = useState(null);
     const categories = Object.keys(grouped);
+    // Scene Builder state
+    const [sceneStory, setSceneStory] = useState("");
+    const [sceneLoading, setSceneLoading] = useState(false);
+    // Projects state
+    const [projectName, setProjectName] = useState("Untitled");
+    const [projectsList, setProjectsList] = useState([]);
+    const [authToken, setAuthToken] = useState(() => localStorage.getItem("openflow_token") || "");
+    const [authEmail, setAuthEmail] = useState("");
+    const [authPass, setAuthPass] = useState("");
+    const BACKEND_URL = "https://openflow-api.fly.dev"; // placeholder — works locally with http://localhost:8000
+    const apiHeaders = () => ({ "Content-Type": "application/json", "Authorization": `Bearer ${authToken}` });
+    const loadProjects = useCallback(async () => {
+        if (!authToken)
+            return;
+        try {
+            const res = await fetch(`${BACKEND_URL}/projects`, { headers: apiHeaders() });
+            if (res.ok)
+                setProjectsList(await res.json());
+        }
+        catch { }
+    }, [authToken]);
+    const handleAuth = async (mode) => {
+        try {
+            const res = await fetch(`${BACKEND_URL}/auth/${mode}`, {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email: authEmail, password: authPass }),
+            });
+            const data = await res.json();
+            if (data.token) {
+                setAuthToken(data.token);
+                localStorage.setItem("openflow_token", data.token);
+            }
+            else
+                alert(data.detail || "Auth failed");
+        }
+        catch {
+            alert("Backend not reachable");
+        }
+    };
+    const saveProject = async () => {
+        if (!authToken) {
+            alert("Login first");
+            return;
+        }
+        const workflow = JSON.stringify({ nodes: nodes.map(n => ({ id: n.id, type: n.type, position: n.position, defId: n.data.def.id, values: n.data.values })), edges });
+        try {
+            await fetch(`${BACKEND_URL}/projects`, {
+                method: "POST", headers: apiHeaders(),
+                body: JSON.stringify({ name: projectName, workflow_json: workflow }),
+            });
+            loadProjects();
+        }
+        catch {
+            alert("Save failed");
+        }
+    };
+    const loadProject = (workflowJson) => {
+        try {
+            const wf = JSON.parse(workflowJson);
+            if (!wf.nodes)
+                return;
+            const newNodes = wf.nodes.map((n) => {
+                const def = NODE_DEFS.find(d => d.id === n.defId);
+                if (!def)
+                    return null;
+                return {
+                    id: n.id, type: "flowNode", position: n.position,
+                    data: {
+                        def, values: n.values || {},
+                        onChange: (key, val) => updateNodeValue(n.id, key, val),
+                        onRun: () => runSingleNodeRef.current(n.id),
+                        onDelete: () => setNodes((nds) => nds.filter((nd) => nd.id !== n.id)),
+                    },
+                };
+            }).filter(Boolean);
+            setNodes(newNodes);
+            setEdges(wf.edges || []);
+        }
+        catch {
+            alert("Invalid workflow");
+        }
+    };
+    const generateScenes = async () => {
+        if (!sceneStory.trim())
+            return;
+        setSceneLoading(true);
+        try {
+            // Use fal.ai LLM or simple splitting
+            const sentences = sceneStory.split(/[.!?]+/).filter(s => s.trim().length > 10).slice(0, 5);
+            const scenePrompts = sentences.length >= 2 ? sentences.map(s => s.trim()) : [
+                `Scene 1: ${sceneStory.slice(0, 80)}`,
+                `Scene 2: ${sceneStory.slice(80, 160) || sceneStory.slice(0, 80)} from a different angle`,
+                `Scene 3: Final moment of "${sceneStory.slice(0, 60)}"`,
+            ];
+            const imgDef = NODE_DEFS.find(d => d.id === "image.text_to_image");
+            const newNodes = [];
+            const newEdges = [];
+            scenePrompts.forEach((prompt, i) => {
+                idCounter.current += 1;
+                const nodeId = `scene_${idCounter.current}`;
+                const defaults = {};
+                imgDef.inputs.forEach(inp => { if (inp.default !== undefined)
+                    defaults[inp.name] = inp.default; });
+                defaults.prompt = `Cinematic film still: ${prompt}`;
+                defaults.model = "flux-pro-1.1";
+                newNodes.push({
+                    id: nodeId, type: "flowNode",
+                    position: { x: 200 + i * 380, y: 150 },
+                    data: {
+                        def: imgDef, values: defaults,
+                        onChange: (key, val) => updateNodeValue(nodeId, key, val),
+                        onRun: () => runSingleNodeRef.current(nodeId),
+                        onDelete: () => setNodes((nds) => nds.filter((n) => n.id !== nodeId)),
+                    },
+                });
+                if (i > 0) {
+                    newEdges.push({
+                        id: `scene_edge_${i}`,
+                        source: newNodes[i - 1].id, sourceHandle: "out",
+                        target: nodeId, targetHandle: "in",
+                        animated: false, type: "smoothstep",
+                        style: { stroke: "#d1d5db", strokeWidth: 1.5 },
+                    });
+                }
+            });
+            setNodes(nds => [...nds, ...newNodes]);
+            setEdges(eds => [...eds, ...newEdges]);
+            setActivePanel(null);
+        }
+        catch {
+            alert("Scene generation failed");
+        }
+        setSceneLoading(false);
+    };
     if (showLanding) {
         return _jsx(LandingPage, { onEnter: () => setShowLanding(false) });
     }
@@ -627,7 +761,23 @@ export default function App() {
                             transition: "all 0.15s",
                         }, onMouseOver: (e) => { if (activePanel !== cat)
                             e.currentTarget.style.color = "#9ca3af"; }, onMouseOut: (e) => { if (activePanel !== cat)
-                            e.currentTarget.style.color = "#6b6b75"; }, dangerouslySetInnerHTML: { __html: SVG_ICONS[cat] || "" } }, cat))), _jsx("div", { style: { flex: 1 } }), _jsx("button", { title: "Settings", onClick: () => setActivePanel(activePanel === "settings" ? null : "settings"), style: {
+                            e.currentTarget.style.color = "#6b6b75"; }, dangerouslySetInnerHTML: { __html: SVG_ICONS[cat] || "" } }, cat))), _jsx("div", { style: { flex: 1 } }), _jsx("button", { title: "Scene Builder", onClick: () => setActivePanel(activePanel === "scenes" ? null : "scenes"), style: {
+                            width: 38, height: 38, borderRadius: 10,
+                            border: "none",
+                            background: activePanel === "scenes" ? "#1e1e22" : "transparent",
+                            color: activePanel === "scenes" ? "#c026d3" : "#6b6b75",
+                            cursor: "pointer",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            marginBottom: 4,
+                        }, children: _jsxs("svg", { width: "20", height: "20", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", children: [_jsx("rect", { x: "2", y: "2", width: "20", height: "20", rx: "2" }), _jsx("line", { x1: "2", y1: "7", x2: "22", y2: "7" }), _jsx("line", { x1: "7", y1: "2", x2: "7", y2: "7" })] }) }), _jsx("button", { title: "Projects", onClick: () => { setActivePanel(activePanel === "projects" ? null : "projects"); loadProjects(); }, style: {
+                            width: 38, height: 38, borderRadius: 10,
+                            border: "none",
+                            background: activePanel === "projects" ? "#1e1e22" : "transparent",
+                            color: activePanel === "projects" ? "#c026d3" : "#6b6b75",
+                            cursor: "pointer",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            marginBottom: 4,
+                        }, children: _jsx("svg", { width: "20", height: "20", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", children: _jsx("path", { d: "M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" }) }) }), _jsx("button", { title: "Settings", onClick: () => setActivePanel(activePanel === "settings" ? null : "settings"), style: {
                             width: 38, height: 38, borderRadius: 10,
                             border: "none",
                             background: activePanel === "settings" ? "#1e1e22" : "transparent",
@@ -650,7 +800,17 @@ export default function App() {
                     flexShrink: 0,
                     zIndex: 15,
                     boxShadow: "4px 0 16px rgba(0,0,0,0.03)",
-                }, children: activePanel === "settings" ? (_jsxs("div", { style: { padding: 20 }, children: [_jsx("div", { style: { fontSize: 13, fontWeight: 600, color: "#1a1a1a", marginBottom: 16 }, children: "Settings" }), _jsx("div", { style: { fontSize: 10, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 6 }, children: "fal.ai API Key" }), _jsx("input", { type: "password", value: falApiKey, onChange: (e) => setFalApiKey(e.target.value), onKeyDown: stopKeys, placeholder: "fal-xxxxxxxx", style: {
+                }, children: activePanel === "scenes" ? (_jsxs("div", { style: { padding: 20 }, children: [_jsx("div", { style: { fontSize: 13, fontWeight: 600, color: "#1a1a1a", marginBottom: 16 }, children: "\uD83C\uDFAC Scene Builder" }), _jsx("div", { style: { fontSize: 10, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 6 }, children: "Describe your story" }), _jsx("textarea", { value: sceneStory, onChange: (e) => setSceneStory(e.target.value), placeholder: "A knight rides through a misty forest, discovers a glowing crystal cave, and meets an ancient dragon...", rows: 6, style: {
+                                width: "100%", background: "#f5f5f7", border: "none", borderRadius: 10,
+                                color: "#1a1a1a", fontSize: 12, padding: "10px 12px", resize: "vertical",
+                                outline: "none", fontFamily: "inherit", lineHeight: 1.5, boxSizing: "border-box",
+                            } }), _jsx("button", { onClick: generateScenes, disabled: sceneLoading || !sceneStory.trim(), style: {
+                                width: "100%", marginTop: 10, padding: "10px",
+                                background: sceneLoading ? "#e5e7eb" : "#c026d3",
+                                color: sceneLoading ? "#9ca3af" : "#fff",
+                                border: "none", borderRadius: 10, fontSize: 12, fontWeight: 600,
+                                cursor: sceneLoading ? "not-allowed" : "pointer",
+                            }, children: sceneLoading ? "Generating..." : "Generate Scenes ✦" }), _jsx("div", { style: { fontSize: 10, color: "#9ca3af", marginTop: 8 }, children: "Splits your story into 3-5 scenes, each as an image node on the canvas, auto-connected in sequence." })] })) : activePanel === "projects" ? (_jsxs("div", { style: { padding: 20 }, children: [_jsx("div", { style: { fontSize: 13, fontWeight: 600, color: "#1a1a1a", marginBottom: 16 }, children: "\uD83D\uDCC1 Projects" }), !authToken ? (_jsxs("div", { children: [_jsx("div", { style: { fontSize: 10, fontWeight: 600, color: "#9ca3af", marginBottom: 6 }, children: "LOGIN / SIGNUP" }), _jsx("input", { placeholder: "Email", value: authEmail, onChange: e => setAuthEmail(e.target.value), style: { width: "100%", background: "#f5f5f7", border: "none", borderRadius: 8, fontSize: 12, padding: "8px 12px", outline: "none", marginBottom: 6, boxSizing: "border-box" } }), _jsx("input", { placeholder: "Password", type: "password", value: authPass, onChange: e => setAuthPass(e.target.value), style: { width: "100%", background: "#f5f5f7", border: "none", borderRadius: 8, fontSize: 12, padding: "8px 12px", outline: "none", marginBottom: 8, boxSizing: "border-box" } }), _jsxs("div", { style: { display: "flex", gap: 6 }, children: [_jsx("button", { onClick: () => handleAuth("login"), style: { flex: 1, padding: "8px", background: "#c026d3", color: "#fff", border: "none", borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: "pointer" }, children: "Login" }), _jsx("button", { onClick: () => handleAuth("signup"), style: { flex: 1, padding: "8px", background: "#f5f5f7", color: "#1a1a1a", border: "1px solid #ebebee", borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: "pointer" }, children: "Sign Up" })] })] })) : (_jsxs("div", { children: [_jsxs("div", { style: { display: "flex", gap: 6, marginBottom: 12 }, children: [_jsx("input", { placeholder: "Project name", value: projectName, onChange: e => setProjectName(e.target.value), style: { flex: 1, background: "#f5f5f7", border: "none", borderRadius: 8, fontSize: 12, padding: "8px 12px", outline: "none" } }), _jsx("button", { onClick: saveProject, style: { padding: "8px 12px", background: "#c026d3", color: "#fff", border: "none", borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: "pointer" }, children: "Save" })] }), _jsx("div", { style: { fontSize: 10, fontWeight: 600, color: "#9ca3af", marginBottom: 8 }, children: "SAVED PROJECTS" }), projectsList.length === 0 && _jsx("div", { style: { fontSize: 11, color: "#9ca3af" }, children: "No projects yet" }), projectsList.map(p => (_jsxs("div", { onClick: () => loadProject(p.workflow_json), style: { padding: "8px 10px", background: "#f5f5f7", borderRadius: 8, marginBottom: 4, cursor: "pointer", fontSize: 12, fontWeight: 500, color: "#1a1a1a" }, onMouseOver: e => { e.currentTarget.style.background = "#e8e8eb"; }, onMouseOut: e => { e.currentTarget.style.background = "#f5f5f7"; }, children: [p.name, _jsx("div", { style: { fontSize: 9, color: "#9ca3af", marginTop: 2 }, children: p.updated_at?.slice(0, 16) })] }, p.id))), _jsx("button", { onClick: () => { setAuthToken(""); localStorage.removeItem("openflow_token"); }, style: { marginTop: 12, padding: "6px", background: "transparent", border: "none", fontSize: 10, color: "#9ca3af", cursor: "pointer" }, children: "Logout" })] }))] })) : activePanel === "settings" ? (_jsxs("div", { style: { padding: 20 }, children: [_jsx("div", { style: { fontSize: 13, fontWeight: 600, color: "#1a1a1a", marginBottom: 16 }, children: "Settings" }), _jsx("div", { style: { fontSize: 10, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 6 }, children: "fal.ai API Key" }), _jsx("input", { type: "password", value: falApiKey, onChange: (e) => setFalApiKey(e.target.value), onKeyDown: stopKeys, placeholder: "fal-xxxxxxxx", style: {
                                 width: "100%",
                                 background: "#f5f5f7",
                                 border: "none",

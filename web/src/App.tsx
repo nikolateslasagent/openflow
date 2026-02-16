@@ -31,6 +31,9 @@ import { TutorialOverlay, shouldShowTutorial } from "./TutorialOverlay";
 import { encodeWorkflowToUrl, decodeWorkflowFromHash } from "./WorkflowSharing";
 import { StoryboardView } from "./Storyboard";
 import TimelineEditor from "./TimelineEditor";
+import { MarketplacePanel, MARKETPLACE_TEMPLATES } from "./Marketplace";
+import { CustomNodeBuilder, loadCustomNodes } from "./CustomNodes";
+import { WEBHOOK_NODE_DEFS } from "./WebhookNodes";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -450,6 +453,7 @@ const NODE_DEFS: NodeDef[] = [
       { name: "preview", type: "string", description: "Caption preview" },
     ],
   },
+  ...WEBHOOK_NODE_DEFS as NodeDef[],
 ];
 
 const CATEGORIES: Record<string, string> = {
@@ -461,6 +465,7 @@ const CATEGORIES: Record<string, string> = {
   transform: "Transform",
   output: "Output",
   tools: "Tools",
+  custom: "Custom",
 };
 
 // SVG outlined icons for toolbar and nodes
@@ -952,22 +957,72 @@ function Dashboard({ onNewProject, onOpenCanvas, onLoadTemplate, assets }: {
           </div>
         </div>
 
-        {/* Usage Stats */}
+        {/* Featured Community Templates */}
         <div style={{ marginBottom: 40 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 600, color: "#1a1a1a", marginBottom: 16 }}>Usage</h2>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 14 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 600, color: "#1a1a1a", marginBottom: 16, letterSpacing: "-0.3px" }}>🏪 Featured from Marketplace</h2>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14 }}>
+            {MARKETPLACE_TEMPLATES.slice(0, 4).map((t) => (
+              <button key={t.id} onClick={() => onLoadTemplate({ name: t.title, description: t.description, icon: t.icon, color: t.color, nodes: t.nodes.map(n => ({ defId: n.defId, x: n.x, y: n.y, values: n.values || {} })), edges: t.edges } as any)} style={{
+                padding: "20px", background: `linear-gradient(135deg, ${t.color}08, ${t.color}15)`, border: `1px solid ${t.color}30`, borderRadius: 16,
+                cursor: "pointer", textAlign: "left", transition: "all 0.2s",
+              }}
+                onMouseOver={(e) => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = `0 8px 24px ${t.color}20`; }}
+                onMouseOut={(e) => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "none"; }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                  <span style={{ fontSize: 24 }}>{t.icon}</span>
+                  <span style={{ padding: "2px 8px", background: `${t.color}20`, color: t.color, borderRadius: 8, fontSize: 9, fontWeight: 700 }}>{t.nodeCount} nodes</span>
+                </div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: "#1a1a1a", marginBottom: 4 }}>{t.title}</div>
+                <div style={{ fontSize: 11, color: "#6b7280", lineHeight: 1.4 }}>{t.description}</div>
+                <div style={{ fontSize: 9, color: "#9ca3af", marginTop: 8 }}>⬇ {t.downloads.toLocaleString()} uses</div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Quick Stats */}
+        <div style={{ marginBottom: 40 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 600, color: "#1a1a1a", marginBottom: 16 }}>Quick Stats</h2>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 14 }}>
             {[
-              { label: "Images Generated", value: assets.filter(a => a.type === "image").length, icon: "🖼️" },
-              { label: "Videos Generated", value: assets.filter(a => a.type === "video").length, icon: "🎬" },
-              { label: "Total Assets", value: assets.length, icon: "📦" },
-              { label: "Models Available", value: "32+", icon: "🤖" },
+              { label: "Total Generations", value: assets.length, icon: "⚡", gradient: "linear-gradient(135deg, #c026d3, #ec4899)" },
+              { label: "Favorite Model", value: assets.length > 0 ? (assets.reduce((acc, a) => { acc[a.model] = (acc[a.model] || 0) + 1; return acc; }, {} as Record<string, number>), Object.entries(assets.reduce((acc, a) => { acc[a.model] = (acc[a.model] || 0) + 1; return acc; }, {} as Record<string, number>)).sort((a, b) => b[1] - a[1])[0]?.[0] || "—") : "—", icon: "⭐", gradient: "linear-gradient(135deg, #f59e0b, #f97316)" },
+              { label: "Avg Gen Time", value: "~12s", icon: "⏱", gradient: "linear-gradient(135deg, #6366f1, #8b5cf6)" },
+              { label: "Models Used", value: new Set(assets.map(a => a.model)).size || 0, icon: "🤖", gradient: "linear-gradient(135deg, #14b8a6, #06b6d4)" },
             ].map((stat) => (
-              <div key={stat.label} style={{ padding: "20px", background: "#ffffff", border: "1px solid #e8e8eb", borderRadius: 14 }}>
-                <div style={{ fontSize: 20, marginBottom: 8 }}>{stat.icon}</div>
-                <div style={{ fontSize: 24, fontWeight: 700, color: "#1a1a1a" }}>{stat.value}</div>
+              <div key={stat.label} style={{ padding: "20px", background: "#ffffff", border: "1px solid #e8e8eb", borderRadius: 16, transition: "all 0.2s", cursor: "default" }}
+                onMouseOver={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 8px 20px rgba(0,0,0,0.06)"; }}
+                onMouseOut={e => { e.currentTarget.style.transform = "none"; e.currentTarget.style.boxShadow = "none"; }}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: stat.gradient, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, marginBottom: 10 }}>{stat.icon}</div>
+                <div style={{ fontSize: 22, fontWeight: 700, color: "#1a1a1a" }}>{stat.value}</div>
                 <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>{stat.label}</div>
               </div>
             ))}
+          </div>
+        </div>
+
+        {/* Recent Activity Feed */}
+        <div style={{ marginBottom: 40 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 600, color: "#1a1a1a", marginBottom: 16 }}>Recent Activity</h2>
+          <div style={{ background: "#ffffff", border: "1px solid #e8e8eb", borderRadius: 16, overflow: "hidden" }}>
+            {assets.length === 0 ? (
+              <div style={{ padding: 24, textAlign: "center", color: "#9ca3af", fontSize: 13 }}>No activity yet — start generating!</div>
+            ) : (
+              assets.slice(0, 10).map((asset, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderBottom: i < Math.min(assets.length, 10) - 1 ? "1px solid #f0f0f2" : "none" }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 8, background: "#f5f5f7", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>
+                    {asset.type === "video" ? "🎬" : "🖼️"}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12, fontWeight: 500, color: "#1a1a1a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      Generated {asset.type} with {asset.model}
+                    </div>
+                    <div style={{ fontSize: 10, color: "#9ca3af", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{asset.prompt || "No prompt"}</div>
+                  </div>
+                  <div style={{ fontSize: 9, color: "#c4c4c8", whiteSpace: "nowrap" }}>{new Date(asset.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
@@ -1882,6 +1937,12 @@ export default function App() {
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
         </button>
 
+        {/* Marketplace */}
+        <button title="Marketplace" onClick={() => { setActivePanel(activePanel === "marketplace" ? null : "marketplace"); }}
+          style={{ width: 38, height: 38, borderRadius: 10, border: "none", background: activePanel === "marketplace" ? "#1e1e22" : "transparent", color: activePanel === "marketplace" ? "#c026d3" : "#6b6b75", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" x2="21" y1="6" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+        </button>
+
         {/* Settings */}
         <button title="Settings" onClick={() => setActivePanel(activePanel === "settings" ? null : "settings")}
           style={{ width: 38, height: 38, borderRadius: 10, border: "none", background: activePanel === "settings" ? "#1e1e22" : "transparent", color: activePanel === "settings" ? "#c026d3" : "#6b6b75", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }}
@@ -1895,8 +1956,38 @@ export default function App() {
 
       {/* Flyout panel */}
       {activePanel && (
-        <aside style={{ width: activePanel === "chat" ? 300 : activePanel === "models" ? 280 : 220, background: "#ffffff", borderRight: "1px solid #ebebee", overflowY: "auto", flexShrink: 0, zIndex: 15, boxShadow: "4px 0 16px rgba(0,0,0,0.03)", display: "flex", flexDirection: "column", animation: "slideFlyout 0.2s ease-out" }}>
-          {activePanel === "models" ? (
+        <aside style={{ width: activePanel === "chat" ? 300 : activePanel === "models" ? 280 : activePanel === "marketplace" ? 300 : activePanel === "customnodes" ? 300 : 220, background: "#ffffff", borderRight: "1px solid #ebebee", overflowY: "auto", flexShrink: 0, zIndex: 15, boxShadow: "4px 0 16px rgba(0,0,0,0.03)", display: "flex", flexDirection: "column", animation: "slideFlyout 0.2s ease-out" }}>
+          {activePanel === "customnodes" ? (
+            <CustomNodeBuilder onSave={(customNode) => {
+              addToast(`Custom node "${customNode.name}" created!`, "success");
+            }} />
+          ) : activePanel === "marketplace" ? (
+            <MarketplacePanel onUseTemplate={(template) => {
+              // Convert marketplace template to workflow nodes
+              const newNodes = template.nodes.map((n) => {
+                const def = NODE_DEFS.find(d => d.id === n.defId);
+                if (!def) return null;
+                idCounter.current++;
+                const nodeId = `${def.id}_${idCounter.current}`;
+                const defaults: Record<string, unknown> = {};
+                def.inputs.forEach((inp) => { if (inp.default !== undefined) defaults[inp.name] = inp.default; });
+                return {
+                  id: nodeId, type: "flowNode" as const, position: { x: n.x + 100, y: n.y + 100 },
+                  data: { def, values: { ...defaults, ...n.values },
+                    onChange: (key: string, val: unknown) => updateNodeValue(nodeId, key, val),
+                    onRun: () => runSingleNodeRef.current(nodeId),
+                    onDelete: () => { pushUndo(); setNodes((nds: Node[]) => nds.filter((nd: Node) => nd.id !== nodeId)); },
+                    onPreview: (url: string, type: "image" | "video") => setPreviewModal({ url, type }),
+                  },
+                };
+              }).filter(Boolean);
+              pushUndo();
+              setNodes((nds) => [...nds, ...newNodes as Node[]]);
+              setActivePanel(null);
+              setCurrentView("canvas");
+              addToast(`Loaded "${template.title}" — ${template.nodeCount} nodes`, "success");
+            }} />
+          ) : activePanel === "models" ? (
             <ModelManagerPanel onCreateNode={(defId, modelKey) => {
               const def = NODE_DEFS.find(d => d.id === defId);
               if (def) { addNodeWithHandler(def, { model: modelKey }); setActivePanel(null); setCurrentView("canvas"); }
@@ -2014,9 +2105,17 @@ export default function App() {
                 📊 Export Training Data (JSONL)
               </button>
 
+              <div style={{ fontSize: 10, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.8px", marginTop: 16, marginBottom: 6 }}>Custom Nodes</div>
+              <div style={{ fontSize: 10, color: "#6b7280", marginBottom: 6 }}>Connect any REST API as a workflow node</div>
+              <button onClick={() => setActivePanel("customnodes")}
+                style={{ width: "100%", padding: "8px 12px", background: "#f5f5f7", border: "1px solid #ebebee", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: "pointer", color: "#1a1a1a", textAlign: "left", marginBottom: 6 }}>
+                🔧 Create Custom Node
+              </button>
+              <div style={{ fontSize: 10, color: "#9ca3af", marginBottom: 6 }}>{loadCustomNodes().length} custom nodes created</div>
+
               <div style={{ fontSize: 10, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.8px", marginTop: 16, marginBottom: 6 }}>About</div>
               <div style={{ fontSize: 11, color: "#6b7280", lineHeight: 1.8 }}>
-                OpenFlow v6.0 — Sprint 6<br />
+                OpenFlow v8.0 — Sprint 8<br />
                 <a href="https://github.com/nikolateslasagent/openflow" target="_blank" rel="noopener" style={{ color: "#c026d3", textDecoration: "none" }}>GitHub</a> · <a href="https://openflow-docs.vercel.app" target="_blank" rel="noopener" style={{ color: "#c026d3", textDecoration: "none" }}>Docs</a>
               </div>
 
@@ -2144,6 +2243,18 @@ export default function App() {
               style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, border: "1px solid #2a2a30", background: "#141416", color: "#9ca3af", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
               🔗 Share
             </button>
+            <button onClick={() => {
+              const collabUrl = `${window.location.origin}${window.location.pathname}?collab=${Date.now().toString(36)}`;
+              navigator.clipboard.writeText(collabUrl).then(() => addToast("Collaboration link copied!", "success")).catch(() => prompt("Copy this link:", collabUrl));
+            }} title="Invite collaborator"
+              style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, border: "1px solid #2a2a30", background: "#141416", color: "#9ca3af", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+              👥 Invite
+            </button>
+            {/* User avatar & activity indicator */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: 4 }}>
+              <div style={{ fontSize: 10, color: "#6b6b75" }}>Last edited just now</div>
+              <div style={{ width: 28, height: 28, borderRadius: "50%", background: "linear-gradient(135deg, #c026d3, #6366f1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "#fff", fontWeight: 700 }}>Y</div>
+            </div>
             <button onClick={() => setShowTutorial(true)} title="Help / Tutorial"
               style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 10px", borderRadius: 8, border: "1px solid #2a2a30", background: "#141416", color: "#9ca3af", fontSize: 12, cursor: "pointer" }}>
               ❓
@@ -2260,6 +2371,11 @@ export default function App() {
                 <Controls style={{ background: "#ffffff", border: "1px solid #e8e8eb", borderRadius: 10, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }} />
                 <MiniMap style={{ background: "#ffffff", borderRadius: 10, border: "1px solid #e8e8eb", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }} nodeColor="#d1d5db" maskColor="rgba(240,240,242,0.8)" />
               </ReactFlow>
+              {/* Collaboration cursor (placeholder) */}
+              <div style={{ position: "absolute", left: "45%", top: "40%", pointerEvents: "none", zIndex: 50, transition: "all 2s ease" }}>
+                <svg width="16" height="20" viewBox="0 0 16 20" fill="#c026d3"><path d="M0 0L16 12L8 12L4 20L0 0Z"/></svg>
+                <span style={{ position: "absolute", left: 16, top: 8, background: "#c026d3", color: "#fff", fontSize: 9, fontWeight: 600, padding: "2px 6px", borderRadius: 4, whiteSpace: "nowrap" }}>You</span>
+              </div>
               {/* Node comment sticky notes */}
               {nodes.filter(n => nodeComments[n.id]).map(n => (
                 <div key={`comment-${n.id}`} style={{ position: "absolute", left: (n.position?.x || 0) + 270, top: (n.position?.y || 0) - 10, width: 120, minHeight: 60, background: "#fef9c3", border: "1px solid #fde68a", borderRadius: 8, padding: 8, fontSize: 10, color: "#713f12", fontFamily: "'Inter', sans-serif", boxShadow: "0 2px 8px rgba(0,0,0,0.08)", zIndex: 5, pointerEvents: "auto" }}

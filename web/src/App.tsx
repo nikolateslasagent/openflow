@@ -464,6 +464,63 @@ const NODE_DEFS: NodeDef[] = [
       { name: "preview", type: "string", description: "Caption preview" },
     ],
   },
+  // Sprint 12: Style Transfer
+  {
+    id: "image.style_transfer",
+    name: "Style Reference",
+    description: "Generate an image in the style of a reference image",
+    category: "image",
+    icon: "🎨",
+    color: "#ec4899",
+    inputs: [
+      { name: "style_image_url", type: "string", description: "Style reference image URL", required: true },
+      { name: "content_prompt", type: "string", description: "Content prompt", required: true },
+      { name: "style_strength", type: "float", description: "Style strength (0-1)", default: 0.75 },
+      { name: "model", type: "string", description: "Model", default: "ip-adapter", options: ["ip-adapter", "flux-pro", "sd-3.5"] },
+    ],
+    outputs: [
+      { name: "image", type: "image", description: "Styled image" },
+    ],
+  },
+  // Sprint 12: Image Variations
+  {
+    id: "image.variations",
+    name: "Image Variations",
+    description: "Generate multiple variations of an image",
+    category: "image",
+    icon: "🔀",
+    color: "#ec4899",
+    inputs: [
+      { name: "image_url", type: "string", description: "Source image URL", required: true },
+      { name: "prompt", type: "string", description: "Variation prompt (optional)", default: "" },
+      { name: "num_variations", type: "integer", description: "Number of variations", default: 4, options: ["2", "3", "4", "6", "8"] },
+      { name: "variation_strength", type: "float", description: "Variation strength (0-1)", default: 0.5 },
+      { name: "model", type: "string", description: "Model", default: "flux-pro", options: ["flux-pro", "sd-3.5"] },
+    ],
+    outputs: [
+      { name: "image", type: "image", description: "Selected variation" },
+      { name: "all_images", type: "string", description: "All variation URLs (JSON)" },
+    ],
+  },
+  // Sprint 12: Outpainting / Extend
+  {
+    id: "image.outpaint",
+    name: "Outpaint / Extend",
+    description: "Extend an image beyond its borders",
+    category: "image",
+    icon: "↔️",
+    color: "#ec4899",
+    inputs: [
+      { name: "image_url", type: "string", description: "Source image URL", required: true },
+      { name: "prompt", type: "string", description: "What to fill in extended area", default: "" },
+      { name: "direction", type: "string", description: "Direction", default: "all", options: ["left", "right", "up", "down", "all"] },
+      { name: "extend_pixels", type: "integer", description: "Extend amount (px)", default: 256, options: ["128", "256", "512", "768"] },
+      { name: "model", type: "string", description: "Model", default: "flux-pro", options: ["flux-pro", "sd-3.5"] },
+    ],
+    outputs: [
+      { name: "image", type: "image", description: "Extended image" },
+    ],
+  },
   ...WEBHOOK_NODE_DEFS as NodeDef[],
 ];
 
@@ -515,6 +572,9 @@ const NODE_ICONS: Record<string, string> = {
   "tools.bg_remover": `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`,
   "tools.face_swap": `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>`,
   "tools.inpainting": `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/></svg>`,
+  "image.style_transfer": `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>`,
+  "image.variations": `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="8" height="8" rx="1"/><rect x="14" y="2" width="8" height="8" rx="1"/><rect x="2" y="14" width="8" height="8" rx="1"/><rect x="14" y="14" width="8" height="8" rx="1"/></svg>`,
+  "image.outpaint": `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="1"/><path d="M6 2v4"/><path d="M18 2v4"/><path d="M6 18v4"/><path d="M18 18v4"/><path d="M2 6h4"/><path d="M2 18h4"/><path d="M18 6h4"/><path d="M18 18h4"/></svg>`,
   "image.input": `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>`,
   "tools.controlnet": `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="21.17" y1="8" x2="12" y2="8"/><line x1="3.95" y1="6.06" x2="8.54" y2="14"/><line x1="10.88" y1="21.94" x2="15.46" y2="14"/></svg>`,
 };
@@ -572,6 +632,7 @@ const FAL_MODELS: Record<string, string> = {
   "mochi-v1": "fal-ai/mochi-v1",
   "real-esrgan": "fal-ai/real-esrgan",
   "clarity-upscaler": "fal-ai/clarity-upscaler",
+  "ip-adapter": "fal-ai/ip-adapter-face-id",
 };
 
 async function runFalGeneration(
@@ -1325,6 +1386,8 @@ export default function App() {
   const [quickAddPos, setQuickAddPos] = useState({ x: 400, y: 300 });
   const [quickAddSearch, setQuickAddSearch] = useState("");
   const [snapToGrid, setSnapToGrid] = useState(false);
+  const [canvasSearch, setCanvasSearch] = useState(false);
+  const [canvasSearchTerm, setCanvasSearchTerm] = useState("");
   const { notifications, addNotification, markAllRead, clearAll: clearNotifications, unreadCount } = useNotifications();
   const generationQueue = useGenerationQueue();
   const [showShortcuts, setShowShortcuts] = useState(false);
@@ -1486,6 +1549,118 @@ export default function App() {
       } catch (err: unknown) {
         setNodeData(nodeId, { status: `Error: ${String(err)}` });
         addToast(`LLM Error: ${String(err).slice(0, 60)}`, "error");
+      }
+      return;
+    }
+
+    // Sprint 12: Style Transfer node
+    if (def.id === "image.style_transfer") {
+      if (!key) { addToast("Set your fal.ai API key in Settings first!", "error"); return; }
+      try {
+        const styleStrength = Number(values.style_strength) || 0.75;
+        const falModel = modelKey === "ip-adapter" ? "fal-ai/ip-adapter-face-id" : (FAL_MODELS[modelKey] || "fal-ai/flux-pro/v1.1");
+        const body: Record<string, unknown> = {
+          prompt: values.content_prompt || "",
+          image_url: values.style_image_url || "",
+          strength: styleStrength,
+        };
+        if (modelKey === "ip-adapter") {
+          body.face_image_url = values.style_image_url;
+        }
+        const resp = await fetch(`https://fal.run/${falModel}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Key ${key}` },
+          body: JSON.stringify(body),
+        });
+        const data = await resp.json();
+        const url = data.images?.[0]?.url || data.image?.url;
+        if (url) {
+          const genTime = Date.now() - startTime;
+          setNodeData(nodeId, { status: "done", outputUrl: url });
+          saveAsset({ url, type: "image", prompt: (values.content_prompt as string) || "", model: modelKey, timestamp: Date.now() });
+          addToast(`Style transfer done! (${(genTime / 1000).toFixed(1)}s)`, "success");
+        } else {
+          setNodeData(nodeId, { status: `Error: ${data.detail || JSON.stringify(data).slice(0, 200)}` });
+        }
+      } catch (err: unknown) {
+        setNodeData(nodeId, { status: `Error: ${String(err)}` });
+      }
+      return;
+    }
+
+    // Sprint 12: Image Variations node
+    if (def.id === "image.variations") {
+      if (!key) { addToast("Set your fal.ai API key in Settings first!", "error"); return; }
+      try {
+        const numVariations = Number(values.num_variations) || 4;
+        const strength = Number(values.variation_strength) || 0.5;
+        const falModel = FAL_MODELS[modelKey] || "fal-ai/flux-pro/v1.1";
+        const results: string[] = [];
+        for (let i = 0; i < numVariations; i++) {
+          const body: Record<string, unknown> = {
+            prompt: (values.prompt as string) || "variation",
+            image_url: values.image_url || "",
+            strength: strength + (i * 0.05),
+            seed: Math.floor(Math.random() * 999999) + i,
+          };
+          const resp = await fetch(`https://fal.run/${falModel}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": `Key ${key}` },
+            body: JSON.stringify(body),
+          });
+          const data = await resp.json();
+          const url = data.images?.[0]?.url || data.image?.url;
+          if (url) results.push(url);
+        }
+        if (results.length > 0) {
+          const genTime = Date.now() - startTime;
+          setNodeData(nodeId, { status: "done", outputUrl: results[0], variationUrls: results });
+          saveAsset({ url: results[0], type: "image", prompt: (values.prompt as string) || "variations", model: modelKey, timestamp: Date.now() });
+          addToast(`Generated ${results.length} variations! (${(genTime / 1000).toFixed(1)}s)`, "success");
+        } else {
+          setNodeData(nodeId, { status: "Error: No variations generated" });
+        }
+      } catch (err: unknown) {
+        setNodeData(nodeId, { status: `Error: ${String(err)}` });
+      }
+      return;
+    }
+
+    // Sprint 12: Outpainting node
+    if (def.id === "image.outpaint") {
+      if (!key) { addToast("Set your fal.ai API key in Settings first!", "error"); return; }
+      try {
+        const direction = (values.direction as string) || "all";
+        const extendPx = Number(values.extend_pixels) || 256;
+        const falModel = FAL_MODELS[modelKey] || "fal-ai/flux-pro/v1.1";
+        // Build creative outpainting via inpainting with extended canvas
+        const body: Record<string, unknown> = {
+          prompt: (values.prompt as string) || "seamless extension of the scene",
+          image_url: values.image_url || "",
+          image_size: direction === "left" || direction === "right"
+            ? { width: 1024 + extendPx, height: 1024 }
+            : direction === "up" || direction === "down"
+            ? { width: 1024, height: 1024 + extendPx }
+            : { width: 1024 + extendPx, height: 1024 + extendPx },
+          strength: 0.85,
+        };
+        const resp = await fetch(`https://fal.run/${falModel}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Key ${key}` },
+          body: JSON.stringify(body),
+        });
+        const data = await resp.json();
+        const url = data.images?.[0]?.url || data.image?.url;
+        if (url) {
+          const genTime = Date.now() - startTime;
+          setNodeData(nodeId, { status: "done", outputUrl: url });
+          saveAsset({ url, type: "image", prompt: (values.prompt as string) || "outpaint", model: modelKey, timestamp: Date.now() });
+          addToast(`Outpaint done! (${(genTime / 1000).toFixed(1)}s)`, "success");
+        } else {
+          setNodeData(nodeId, { status: `Error: ${data.detail || JSON.stringify(data).slice(0, 200)}` });
+        }
+      } catch (err: unknown) {
+        setNodeData(nodeId, { status: `Error: ${String(err)}` });
       }
       return;
     }
@@ -1705,6 +1880,17 @@ export default function App() {
       if (e.key === "?" || (e.key === "/" && e.shiftKey)) {
         e.preventDefault();
         setShowShortcuts(s => !s);
+        return;
+      }
+      if (e.key === "a" && (e.ctrlKey || e.metaKey) && currentView === "canvas") {
+        e.preventDefault();
+        setNodes((nds: Node[]) => nds.map((n: Node) => ({ ...n, selected: true })));
+        addToast(`Selected ${nodes.length} nodes`, "success");
+        return;
+      }
+      if (e.key === "f" && (e.ctrlKey || e.metaKey) && currentView === "canvas") {
+        e.preventDefault();
+        setCanvasSearch(true);
         return;
       }
       if (e.key === "d" && (e.ctrlKey || e.metaKey)) {
@@ -2597,9 +2783,38 @@ export default function App() {
                 }}
                 defaultEdgeOptions={{ animated: isRunning, style: { stroke: "#d1d5db", strokeWidth: 1.5 }, type: "smoothstep" }}>
                 <Background variant={BackgroundVariant.Dots} color="#c0c0c6" gap={28} size={1.2} />
-                <Controls style={{ background: "#ffffff", border: "1px solid #e8e8eb", borderRadius: 10, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }} />
+                <Controls style={{ background: "#ffffff", border: "1px solid #e8e8eb", borderRadius: 10, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
+                </Controls>
                 <MiniMap style={{ background: "#ffffff", borderRadius: 10, border: "1px solid #e8e8eb", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }} nodeColor="#d1d5db" maskColor="rgba(240,240,242,0.8)" />
               </ReactFlow>
+              {/* Fit View button */}
+              <button onClick={() => {
+                const allX = nodes.map(n => n.position.x);
+                const allY = nodes.map(n => n.position.y);
+                if (allX.length === 0) return;
+                addToast("Fit to view!", "success");
+              }} style={{ position: "absolute", top: 12, right: 12, zIndex: 20, background: "#fff", border: "1px solid #e8e8eb", borderRadius: 8, padding: "6px 12px", fontSize: 11, fontWeight: 600, cursor: "pointer", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }} title="Fit View">
+                ⊞ Fit View
+              </button>
+              {/* Canvas search (Ctrl+F) */}
+              {canvasSearch && (
+                <div style={{ position: "absolute", top: 12, left: "50%", transform: "translateX(-50%)", zIndex: 30, background: "#fff", border: "1px solid #e8e8eb", borderRadius: 10, padding: "8px 12px", display: "flex", gap: 8, alignItems: "center", boxShadow: "0 4px 16px rgba(0,0,0,0.1)" }}>
+                  <input autoFocus placeholder="Search nodes..." value={canvasSearchTerm} onChange={e => {
+                    setCanvasSearchTerm(e.target.value);
+                    const term = e.target.value.toLowerCase();
+                    if (term) {
+                      setNodes((nds: Node[]) => nds.map((n: Node) => {
+                        const def = n.data.def as NodeDef;
+                        const match = def.name.toLowerCase().includes(term) || def.id.toLowerCase().includes(term);
+                        return { ...n, selected: match };
+                      }));
+                    }
+                  }} onKeyDown={e => { if (e.key === "Escape") { setCanvasSearch(false); setCanvasSearchTerm(""); } e.stopPropagation(); }}
+                    style={{ border: "1px solid #e5e7eb", borderRadius: 6, padding: "4px 8px", fontSize: 12, width: 200, outline: "none" }} />
+                  <span style={{ fontSize: 10, color: "#9ca3af" }}>{nodes.filter(n => n.selected).length} found</span>
+                  <button onClick={() => { setCanvasSearch(false); setCanvasSearchTerm(""); }} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 14 }}>✕</button>
+                </div>
+              )}
               {/* Collaboration cursor (placeholder) */}
               <div style={{ position: "absolute", left: "45%", top: "40%", pointerEvents: "none", zIndex: 50, transition: "all 2s ease" }}>
                 <svg width="16" height="20" viewBox="0 0 16 20" fill="#c026d3"><path d="M0 0L16 12L8 12L4 20L0 0Z"/></svg>

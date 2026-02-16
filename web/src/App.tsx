@@ -317,6 +317,18 @@ const NODE_DEFS: NodeDef[] = [
     ],
   },
   {
+    id: "image.input",
+    name: "Image Input",
+    description: "Upload or drop an image",
+    category: "input",
+    icon: "📷",
+    color: "#6366f1",
+    inputs: [
+      { name: "image_url", type: "string", description: "Image URL or data URL", required: true },
+    ],
+    outputs: [{ name: "image", type: "image", description: "Image output" }],
+  },
+  {
     id: "tools.controlnet",
     name: "ControlNet",
     description: "Guided generation with control image",
@@ -379,6 +391,7 @@ const NODE_ICONS: Record<string, string> = {
   "tools.bg_remover": `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`,
   "tools.face_swap": `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>`,
   "tools.inpainting": `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/></svg>`,
+  "image.input": `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>`,
   "tools.controlnet": `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="21.17" y1="8" x2="12" y2="8"/><line x1="3.95" y1="6.06" x2="8.54" y2="14"/><line x1="10.88" y1="21.94" x2="15.46" y2="14"/></svg>`,
 };
 
@@ -511,12 +524,15 @@ function FlowNode({ data, selected }: NodeProps) {
   const [showMenu, setShowMenu] = useState(false);
   const [editing, setEditing] = useState(true);
 
+  const onPreview = data.onPreview as ((url: string, type: "image" | "video") => void) | undefined;
+  const isExecuting = data.isExecuting as boolean | undefined;
   const isComplete = nodeStatus === "done" && outputUrl;
+  const isFailed = typeof nodeStatus === "string" && nodeStatus.startsWith("Error");
   const showForm = editing || !isComplete;
 
   const cardStyle = {
     background: "#ffffff",
-    border: selected ? "1.5px solid #d1d5db" : "1px solid #e8e8eb",
+    border: isExecuting ? "2px solid #f59e0b" : isFailed ? "2px solid #ef4444" : isComplete && !showForm ? "2px solid #22c55e" : selected ? "1.5px solid #d1d5db" : "1px solid #e8e8eb",
     borderRadius: 16,
     minWidth: 260,
     maxWidth: 360,
@@ -570,12 +586,13 @@ function FlowNode({ data, selected }: NodeProps) {
           <div>◎ {model}</div>
           <div style={{ color: "#9ca3af", fontSize: 11, marginTop: 4, fontStyle: "italic" }}>{prompt.length > 60 ? prompt.slice(0, 60) + "..." : prompt}</div>
         </div>
-        <div style={{ padding: "0 18px 16px" }}>
+        <div style={{ padding: "0 18px 16px", cursor: "pointer" }} onClick={() => { const isVid = def.category === "video" || def.id === "video.img_to_video"; if (onPreview && outputUrl) onPreview(outputUrl, isVid ? "video" : "image"); }}>
           {def.category === "video" || def.id === "video.img_to_video" ? (
-            <video src={outputUrl} controls autoPlay loop muted style={{ width: "100%", borderRadius: 12 }} />
+            <video src={outputUrl} controls autoPlay loop muted style={{ width: "100%", maxHeight: 120, borderRadius: 12, objectFit: "cover" }} />
           ) : (
-            <img src={outputUrl} alt="output" style={{ width: "100%", borderRadius: 12, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }} />
+            <img src={outputUrl} alt="output" style={{ width: "100%", maxHeight: 120, borderRadius: 12, objectFit: "cover", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }} />
           )}
+          <div style={{ fontSize: 9, color: "#9ca3af", textAlign: "center", marginTop: 4 }}>Click to expand</div>
         </div>
         {def.inputs.length > 0 && <Handle type="target" position={Position.Left} id="in" style={{ width: 10, height: 10, background: "#d1d5db", border: "2px solid #ffffff", left: -6, top: "50%", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }} />}
         {def.outputs.length > 0 && <Handle type="source" position={Position.Right} id="out" style={{ width: 10, height: 10, background: "#d1d5db", border: "2px solid #ffffff", right: -6, top: "50%", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }} />}
@@ -632,6 +649,19 @@ function FlowNode({ data, selected }: NodeProps) {
           <span style={{ width: 5, height: 5, borderRadius: "50%", background: nodeStatus === "running" ? "#f59e0b" : "#ef4444" }} />
           {nodeStatus === "running" ? "Generating..." : nodeStatus}
         </div>
+      )}
+      {nodeStatus === "done" && outputUrl && (
+        <div style={{ padding: "4px 18px 12px", cursor: "pointer" }} onClick={() => { const isVid = def.category === "video" || def.id === "video.img_to_video"; if (onPreview && outputUrl) onPreview(outputUrl, isVid ? "video" : "image"); }}>
+          {def.category === "video" || def.id === "video.img_to_video" ? (
+            <video src={outputUrl} muted style={{ width: "100%", maxHeight: 120, borderRadius: 10, objectFit: "cover" }} />
+          ) : (
+            <img src={outputUrl} alt="output" style={{ width: "100%", maxHeight: 120, borderRadius: 10, objectFit: "cover" }} />
+          )}
+          <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 4 }}><span style={{ color: "#22c55e", fontSize: 12 }}>✓</span><span style={{ fontSize: 9, color: "#9ca3af" }}>Done · Click to expand</span></div>
+        </div>
+      )}
+      {isFailed && (
+        <div style={{ padding: "4px 18px 8px", display: "flex", alignItems: "center", gap: 4 }}><span style={{ color: "#ef4444", fontSize: 12 }}>✗</span><span style={{ fontSize: 9, color: "#ef4444" }}>Failed</span></div>
       )}
       {def.outputs.length > 0 && <Handle type="source" position={Position.Right} id="out" style={{ width: 10, height: 10, background: "#d1d5db", border: "2px solid #ffffff", right: -6, top: "50%", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }} />}
     </div>
@@ -1086,12 +1116,65 @@ export default function App() {
   const [falApiKey, setFalApiKey] = useState(() => localStorage.getItem("openflow_fal_key") || "148ec4ac-aafc-416b-9213-74cacdeefe5e:0dc2faa972e5762ba57fc758b2fd99e8");
   const [assets, setAssets] = useState<Asset[]>(() => getAssets());
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem("openflow_dark") === "true");
+  const [executionProgress, setExecutionProgress] = useState<{ current: number; total: number; currentNodeId: string | null; log: string[] } | null>(null);
+  const cancelRef = useRef(false);
+  const [previewModal, setPreviewModal] = useState<{ url: string; type: "image" | "video" } | null>(null);
+  // Undo/Redo
+  const [undoStack, setUndoStack] = useState<Array<{ nodes: Node[]; edges: Edge[] }>>([]);
+  const [redoStack, setRedoStack] = useState<Array<{ nodes: Node[]; edges: Edge[] }>>([]);
+  const skipHistoryRef = useRef(false);
   const idCounter = useRef(0);
   const { addToast, ToastContainer } = useToast();
 
   const grouped = useMemo(() => groupByCategory(NODE_DEFS), []);
 
   const refreshAssets = useCallback(() => setAssets(getAssets()), []);
+
+  // Push to undo stack on meaningful changes
+  const pushUndo = useCallback(() => {
+    setUndoStack(prev => {
+      const snap = { nodes: JSON.parse(JSON.stringify(nodes)), edges: JSON.parse(JSON.stringify(edges)) };
+      const next = [...prev, snap];
+      if (next.length > 50) next.shift();
+      return next;
+    });
+    setRedoStack([]);
+  }, [nodes, edges]);
+
+  const undo = useCallback(() => {
+    setUndoStack(prev => {
+      if (prev.length === 0) return prev;
+      const newStack = [...prev];
+      const state = newStack.pop()!;
+      setRedoStack(r => [...r, { nodes: JSON.parse(JSON.stringify(nodes)), edges: JSON.parse(JSON.stringify(edges)) }]);
+      skipHistoryRef.current = true;
+      // Restore nodes with handlers
+      const restoredNodes = state.nodes.map((n: Node) => {
+        const def = n.data.def as NodeDef;
+        return { ...n, data: { ...n.data, onChange: (key: string, val: unknown) => updateNodeValue(n.id, key, val), onRun: () => runSingleNodeRef.current(n.id), onDelete: () => setNodes((nds: Node[]) => nds.filter((nd: Node) => nd.id !== n.id)) } };
+      });
+      setNodes(restoredNodes);
+      setEdges(state.edges);
+      return newStack;
+    });
+  }, [nodes, edges, setNodes, setEdges]);
+
+  const redo = useCallback(() => {
+    setRedoStack(prev => {
+      if (prev.length === 0) return prev;
+      const newStack = [...prev];
+      const state = newStack.pop()!;
+      setUndoStack(u => [...u, { nodes: JSON.parse(JSON.stringify(nodes)), edges: JSON.parse(JSON.stringify(edges)) }]);
+      skipHistoryRef.current = true;
+      const restoredNodes = state.nodes.map((n: Node) => {
+        const def = n.data.def as NodeDef;
+        return { ...n, data: { ...n.data, onChange: (key: string, val: unknown) => updateNodeValue(n.id, key, val), onRun: () => runSingleNodeRef.current(n.id), onDelete: () => setNodes((nds: Node[]) => nds.filter((nd: Node) => nd.id !== n.id)) } };
+      });
+      setNodes(restoredNodes);
+      setEdges(state.edges);
+      return newStack;
+    });
+  }, [nodes, edges, setNodes, setEdges]);
 
   const onConnect = useCallback(
     (connection: Connection) => {
@@ -1135,7 +1218,8 @@ export default function App() {
           def, values: defaults,
           onChange: (key: string, val: unknown) => updateNodeValue(nodeId, key, val),
           onRun: () => runSingleNodeRef.current(nodeId),
-          onDelete: () => setNodes((nds: Node[]) => nds.filter((n: Node) => n.id !== nodeId)),
+          onDelete: () => { pushUndo(); setNodes((nds: Node[]) => nds.filter((n: Node) => n.id !== nodeId)); },
+          onPreview: (url: string, type: "image" | "video") => setPreviewModal({ url, type }),
         },
       };
       setNodes((nds) => [...nds, newNode]);
@@ -1178,7 +1262,10 @@ export default function App() {
     if (!falApiKey) { addToast("Enter your fal.ai API key in Settings!", "error"); return; }
     localStorage.setItem("openflow_fal_key", falApiKey);
     setIsRunning(true);
-    // Topological sort for dependency order
+    cancelRef.current = false;
+    pushUndo();
+
+    // Topological sort — include all nodes with a "model" input
     const genNodes = nodes.filter((n) => {
       const def = n.data.def as NodeDef;
       return def.inputs.some((inp) => inp.name === "model");
@@ -1203,17 +1290,77 @@ export default function App() {
         if (inDegree[next] === 0) queue.push(next);
       }
     }
-    // Add any remaining (cycles)
     nodeIds.forEach(id => { if (!sorted.includes(id)) sorted.push(id); });
 
-    for (const nodeId of sorted) {
+    // Track outputs for data flow
+    const outputMap: Record<string, string> = {};
+    const log: string[] = [];
+
+    for (let i = 0; i < sorted.length; i++) {
+      if (cancelRef.current) { log.push("⛔ Cancelled by user"); setExecutionProgress(prev => prev ? { ...prev, log: [...log] } : null); break; }
+      const nodeId = sorted[i];
       const node = genNodes.find(n => n.id === nodeId);
       if (!node) continue;
+      const def = node.data.def as NodeDef;
+
+      // Pass output from connected source nodes into this node's inputs
+      const incomingEdges = edges.filter(e => e.target === nodeId);
+      for (const edge of incomingEdges) {
+        const sourceUrl = outputMap[edge.source];
+        if (sourceUrl) {
+          // Find the source node to determine output type
+          const sourceNode = nodes.find(n => n.id === edge.source);
+          const sourceDef = sourceNode?.data.def as NodeDef | undefined;
+          const sourceOutputType = sourceDef?.outputs[0]?.type;
+
+          // Map source output to appropriate target input
+          if (sourceOutputType === "image" || sourceOutputType === "string") {
+            // Find the best input to fill: image_url, image, prompt, text, input
+            const imageInputs = ["image_url", "image", "source_url", "target_url"];
+            const textInputs = ["prompt", "text", "input"];
+            const targetInputNames = def.inputs.map(inp => inp.name);
+
+            if (sourceOutputType === "image") {
+              const imgField = imageInputs.find(f => targetInputNames.includes(f));
+              if (imgField) {
+                updateNodeValue(nodeId, imgField, sourceUrl);
+                log.push(`📎 Passed image from ${edge.source} → ${nodeId}.${imgField}`);
+              }
+            } else {
+              const txtField = textInputs.find(f => targetInputNames.includes(f));
+              if (txtField) {
+                updateNodeValue(nodeId, txtField, sourceUrl);
+                log.push(`📎 Passed text from ${edge.source} → ${nodeId}.${txtField}`);
+              }
+            }
+          }
+        }
+      }
+
+      setExecutionProgress({ current: i + 1, total: sorted.length, currentNodeId: nodeId, log: [...log] });
+      setNodeData(nodeId, { isExecuting: true });
+      log.push(`▶ Running ${def.name}...`);
+      setExecutionProgress({ current: i + 1, total: sorted.length, currentNodeId: nodeId, log: [...log] });
+
       await runSingleNode(nodeId);
+
+      // Grab output URL from node data after run
+      setNodes(nds => {
+        const n = nds.find(nd => nd.id === nodeId);
+        if (n?.data.outputUrl) {
+          outputMap[nodeId] = n.data.outputUrl as string;
+          log.push(`✅ ${def.name} complete`);
+        } else if (n?.data.status && (n.data.status as string).startsWith("Error")) {
+          log.push(`❌ ${def.name} failed`);
+        }
+        return nds.map(nd => nd.id === nodeId ? { ...nd, data: { ...nd.data, isExecuting: false } } : nd);
+      });
     }
+
     setIsRunning(false);
-    addToast("All nodes complete!", "success");
-  }, [nodes, edges, falApiKey, runSingleNode, addToast]);
+    setExecutionProgress(null);
+    if (!cancelRef.current) addToast("All nodes complete!", "success");
+  }, [nodes, edges, falApiKey, runSingleNode, addToast, pushUndo, setNodeData, updateNodeValue, setNodes]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -1226,7 +1373,17 @@ export default function App() {
       }
       if (e.key === "Delete" || e.key === "Backspace") {
         const selected = nodes.filter(n => n.selected);
-        if (selected.length) setNodes(nds => nds.filter(n => !n.selected));
+        if (selected.length) { pushUndo(); setNodes(nds => nds.filter(n => !n.selected)); }
+      }
+      if (e.key === "z" && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+        return;
+      }
+      if (e.key === "z" && (e.ctrlKey || e.metaKey) && e.shiftKey) {
+        e.preventDefault();
+        redo();
+        return;
       }
       if (e.key === "s" && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
@@ -1255,7 +1412,37 @@ export default function App() {
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [nodes, setNodes, addToast]);
+  }, [nodes, setNodes, addToast, undo, redo]);
+
+  // Clipboard paste for images (Ctrl+V)
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (const item of Array.from(items)) {
+        if (item.type.startsWith("image/")) {
+          e.preventDefault();
+          const file = item.getAsFile();
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = () => {
+            const dataUrl = reader.result as string;
+            const def = NODE_DEFS.find(d => d.id === "image.input");
+            if (def) {
+              pushUndo();
+              addNodeWithHandler(def, { image_url: dataUrl });
+              setCurrentView("canvas");
+              addToast("Image pasted as node!", "success");
+            }
+          };
+          reader.readAsDataURL(file);
+          break;
+        }
+      }
+    };
+    window.addEventListener("paste", handlePaste);
+    return () => window.removeEventListener("paste", handlePaste);
+  }, [addNodeWithHandler, pushUndo, addToast]);
 
   // Export workflow as JSON
   const exportWorkflow = useCallback(() => {
@@ -1280,6 +1467,40 @@ export default function App() {
   const onDrop = useCallback(
     (e: DragEvent) => {
       e.preventDefault();
+      // Handle file drops (images)
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        const file = e.dataTransfer.files[0];
+        if (file.type.startsWith("image/")) {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const dataUrl = reader.result as string;
+            const def = NODE_DEFS.find(d => d.id === "image.input");
+            if (def) {
+              pushUndo();
+              idCounter.current += 1;
+              const nodeId = `${def.id}_${idCounter.current}`;
+              const bounds = (e.target as HTMLElement).closest(".react-flow")?.getBoundingClientRect();
+              const x = bounds ? e.clientX - bounds.left : e.clientX;
+              const y = bounds ? e.clientY - bounds.top : e.clientY;
+              const newNode: Node = {
+                id: nodeId, type: "flowNode", position: { x, y },
+                data: {
+                  def, values: { image_url: dataUrl },
+                  onChange: (key: string, val: unknown) => updateNodeValue(nodeId, key, val),
+                  onRun: () => runSingleNodeRef.current(nodeId),
+                  onDelete: () => setNodes((nds: Node[]) => nds.filter((n: Node) => n.id !== nodeId)),
+                  onPreview: (url: string, type: "image" | "video") => setPreviewModal({ url, type }),
+                  outputUrl: dataUrl, status: "done",
+                },
+              };
+              setNodes((nds) => [...nds, newNode]);
+              addToast("Image dropped as node!", "success");
+            }
+          };
+          reader.readAsDataURL(file);
+          return;
+        }
+      }
       const data = e.dataTransfer.getData("application/openflow-node");
       if (!data) return;
       const def: NodeDef = JSON.parse(data);
@@ -1290,18 +1511,20 @@ export default function App() {
       const bounds = (e.target as HTMLElement).closest(".react-flow")?.getBoundingClientRect();
       const x = bounds ? e.clientX - bounds.left : e.clientX;
       const y = bounds ? e.clientY - bounds.top : e.clientY;
+      pushUndo();
       const newNode: Node = {
         id: nodeId, type: "flowNode", position: { x, y },
         data: {
           def, values: defaults,
           onChange: (key: string, val: unknown) => updateNodeValue(nodeId, key, val),
           onRun: () => runSingleNodeRef.current(nodeId),
-          onDelete: () => setNodes((nds: Node[]) => nds.filter((n: Node) => n.id !== nodeId)),
+          onDelete: () => { pushUndo(); setNodes((nds: Node[]) => nds.filter((n: Node) => n.id !== nodeId)); },
+          onPreview: (url: string, type: "image" | "video") => setPreviewModal({ url, type }),
         },
       };
       setNodes((nds) => [...nds, newNode]);
     },
-    [setNodes, updateNodeValue]
+    [setNodes, updateNodeValue, pushUndo]
   );
 
   const onDragOver = useCallback((e: DragEvent) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; }, []);
@@ -1653,7 +1876,7 @@ export default function App() {
 
               <div style={{ fontSize: 10, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.8px", marginTop: 16, marginBottom: 6 }}>About</div>
               <div style={{ fontSize: 11, color: "#6b7280", lineHeight: 1.8 }}>
-                OpenFlow v4.0 — Sprint 4<br />
+                OpenFlow v5.0 — Sprint 5<br />
                 <a href="https://github.com/nikolateslasagent/openflow" target="_blank" rel="noopener" style={{ color: "#c026d3", textDecoration: "none" }}>GitHub</a> · <a href="https://openflow-docs.vercel.app" target="_blank" rel="noopener" style={{ color: "#c026d3", textDecoration: "none" }}>Docs</a>
               </div>
 
@@ -1706,6 +1929,21 @@ export default function App() {
         />
       ) : (
         <div style={{ flex: 1, display: "flex", flexDirection: "column" }} onDrop={onDrop} onDragOver={onDragOver}>
+          {/* Execution progress bar */}
+          {executionProgress && (
+            <div style={{ background: "#1a1a1f", borderBottom: "1px solid #2a2a30", padding: "8px 16px", display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: "#f59e0b" }}>⏳ Running {executionProgress.current}/{executionProgress.total} nodes...</span>
+                  <button onClick={() => { cancelRef.current = true; }} style={{ padding: "4px 12px", background: "#ef4444", color: "#fff", border: "none", borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: "pointer" }}>Cancel</button>
+                </div>
+                <div style={{ width: "100%", height: 4, background: "#2a2a30", borderRadius: 2, overflow: "hidden" }}>
+                  <div style={{ width: `${(executionProgress.current / executionProgress.total) * 100}%`, height: "100%", background: "linear-gradient(90deg, #c026d3, #f59e0b)", borderRadius: 2, transition: "width 0.3s" }} />
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Top bar with view tabs */}
           <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", background: "#0e0e10", borderBottom: "1px solid #1e1e22", flexShrink: 0 }}>
             {/* View tabs */}
@@ -1750,6 +1988,10 @@ export default function App() {
                   style={{ padding: "8px 14px", borderRadius: 8, border: "1px solid #2a2a30", background: "#141416", color: "#ef4444", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>🗑 Delete</button>
               </>
             )}
+            <button onClick={() => undo()} disabled={undoStack.length === 0} title="Undo (Ctrl+Z)"
+              style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid #2a2a30", background: "#141416", color: undoStack.length > 0 ? "#9ca3af" : "#4a4a50", fontSize: 12, cursor: undoStack.length > 0 ? "pointer" : "not-allowed" }}>↩</button>
+            <button onClick={() => redo()} disabled={redoStack.length === 0} title="Redo (Ctrl+Shift+Z)"
+              style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid #2a2a30", background: "#141416", color: redoStack.length > 0 ? "#9ca3af" : "#4a4a50", fontSize: 12, cursor: redoStack.length > 0 ? "pointer" : "not-allowed" }}>↪</button>
             <button onClick={exportWorkflow} title="Export workflow"
               style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, border: "1px solid #2a2a30", background: "#141416", color: "#9ca3af", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
               📤 Export
@@ -1795,6 +2037,22 @@ export default function App() {
               </ReactFlow>
             </div>
           )}
+        </div>
+      )}
+      {/* Full-size preview modal */}
+      {previewModal && (
+        <div onClick={() => setPreviewModal(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 40, cursor: "pointer" }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ maxWidth: "90vw", maxHeight: "90vh", position: "relative" }}>
+            <button onClick={() => setPreviewModal(null)} style={{ position: "absolute", top: -12, right: -12, width: 32, height: 32, borderRadius: "50%", background: "#fff", border: "none", fontSize: 16, cursor: "pointer", zIndex: 1, boxShadow: "0 2px 8px rgba(0,0,0,0.3)" }}>✕</button>
+            {previewModal.type === "video" ? (
+              <video src={previewModal.url} controls autoPlay style={{ maxWidth: "90vw", maxHeight: "85vh", borderRadius: 12 }} />
+            ) : (
+              <img src={previewModal.url} alt="preview" style={{ maxWidth: "90vw", maxHeight: "85vh", borderRadius: 12, objectFit: "contain" }} />
+            )}
+            <div style={{ textAlign: "center", marginTop: 12 }}>
+              <a href={previewModal.url} download target="_blank" rel="noopener" style={{ padding: "8px 20px", background: "#c026d3", color: "#fff", borderRadius: 8, fontSize: 13, fontWeight: 600, textDecoration: "none" }}>Download</a>
+            </div>
+          </div>
         </div>
       )}
       <ToastContainer />

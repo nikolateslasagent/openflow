@@ -49,6 +49,21 @@
       outline: 2px solid #c026d3;
       outline-offset: 2px;
     }
+    /* Toolbar button hover micro-interaction */
+    nav[aria-label="Main toolbar"] button {
+      transition: background 0.15s, color 0.15s, transform 0.1s ease-out;
+    }
+    nav[aria-label="Main toolbar"] button:hover {
+      transform: scale(1.08);
+    }
+    nav[aria-label="Main toolbar"] button:active {
+      transform: scale(0.95);
+    }
+    /* Smooth scrollbar for panels */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #555; }
   </style>
 </head>
 <body>

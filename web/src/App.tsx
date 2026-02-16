@@ -46,7 +46,9 @@ import { useGenerationQueue, QueuePanel } from "./GenerationQueue";
 import { KeyboardShortcutsModal } from "./KeyboardShortcuts";
 import { parseAgentParams, APIDocsPanel } from "./AgentAPI";
 import { AnalyticsDashboard, UsageQuotasSection, ModelComparisonPanel, WorkflowStatsInline, trackWorkflowRun, incrementDailyUsage } from "./Analytics";
-import { DashboardCardSkeleton, AssetGridSkeleton, GenerationSpinner } from "./SkeletonLoaders";
+import { DashboardCardSkeleton as _DashboardCardSkeleton, AssetGridSkeleton as _AssetGridSkeleton, GenerationSpinner as _GenerationSpinner } from "./SkeletonLoaders";
+// Re-export for external use
+export { _DashboardCardSkeleton as DashboardCardSkeleton, _AssetGridSkeleton as AssetGridSkeleton, _GenerationSpinner as GenerationSpinner };
 
 // ---------------------------------------------------------------------------
 // Types

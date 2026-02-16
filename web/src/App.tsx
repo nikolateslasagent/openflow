@@ -37,6 +37,10 @@ import { WEBHOOK_NODE_DEFS } from "./WebhookNodes";
 import { PromptLibraryPanel } from "./PromptLibrary";
 import { BatchPanel, BatchResultsGrid } from "./BatchProcessing";
 import { PresetsPanel, savePreset, type NodePreset } from "./NodePresets";
+import { useNotifications, NotificationBell, NotificationPanel } from "./NotificationCenter";
+import { useGenerationQueue, QueuePanel } from "./GenerationQueue";
+import { KeyboardShortcutsModal } from "./KeyboardShortcuts";
+import { parseAgentParams, APIDocsPanel } from "./AgentAPI";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -1310,6 +1314,11 @@ export default function App() {
   const [quickAddPos, setQuickAddPos] = useState({ x: 400, y: 300 });
   const [quickAddSearch, setQuickAddSearch] = useState("");
   const [snapToGrid, setSnapToGrid] = useState(false);
+  const { notifications, addNotification, markAllRead, clearAll: clearNotifications, unreadCount } = useNotifications();
+  const generationQueue = useGenerationQueue();
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  const [showNotifPanel, setShowNotifPanel] = useState(false);
+
   // suppress unused warnings
   void showGallery; void showTutorial; void contextMenu; void editingComment;
 
@@ -1481,9 +1490,11 @@ export default function App() {
       saveTrainingRecord({ timestamp: Date.now(), model: modelKey, prompt: (values.prompt as string) || "", params: values, output_url: result.url, generation_time_ms: genTime, user_id: "local" });
       refreshAssets();
       addToast(`Generated! (${(genTime / 1000).toFixed(1)}s)`, "success");
+      addNotification("success", "Generation complete", `${modelKey}: ${((values.prompt as string) || "").slice(0, 60)}`, nodeId);
     } else {
       setNodeData(nodeId, { status: `Error: ${result.error}` });
       addToast(`Error: ${result.error?.slice(0, 60)}`, "error");
+      addNotification("error", "Generation failed", result.error?.slice(0, 80) || "Unknown error", nodeId);
     }
   }, [nodes, falApiKey, setNodeData, refreshAssets, addToast]);
 
@@ -1510,6 +1521,7 @@ export default function App() {
     setBatchRunning(false);
     refreshAssets();
     addToast(`Batch complete! ${jobs.filter(j => j.status === "done").length}/${jobs.length} succeeded`, "success");
+    addNotification("success", "Batch finished", `${jobs.filter(j => j.status === "done").length}/${jobs.length} succeeded`);
   }, [falApiKey, addToast, refreshAssets]);
 
   // Auto-layout nodes in a grid
@@ -1676,6 +1688,11 @@ export default function App() {
         saveProject();
         addToast("Project saved!", "success");
       }
+      if (e.key === "?" || (e.key === "/" && e.shiftKey)) {
+        e.preventDefault();
+        setShowShortcuts(s => !s);
+        return;
+      }
       if (e.key === "d" && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
         const selected = nodes.filter(n => n.selected);
@@ -1749,6 +1766,31 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem("openflow_node_comments", JSON.stringify(nodeComments));
   }, [nodeComments]);
+
+  // Agent API: parse URL params on load
+  useEffect(() => {
+    const agentAction = parseAgentParams();
+    if (!agentAction) return;
+    setShowLanding(false);
+    if (agentAction.action === "generate" && agentAction.prompt) {
+      const def = NODE_DEFS.find(d => d.id === "image.text_to_image");
+      if (def) {
+        const nodeId = addNodeWithHandler(def, { model: agentAction.model, prompt: agentAction.prompt });
+        setCurrentView("canvas");
+        addToast("Agent: Auto-generating...", "info");
+        setTimeout(() => runSingleNodeRef.current(nodeId), 500);
+      }
+    } else if (agentAction.action === "workflow") {
+      const templateMap: Record<string, number> = { "product-photo": 0, "social-media-video": 1, "storyboard": 2, "music-video": 3 };
+      const idx = templateMap[agentAction.template || ""] ?? 0;
+      if (MINI_APPS[idx]) { loadTemplate(MINI_APPS[idx]); addToast(`Agent: Loaded ${MINI_APPS[idx].name}`, "info"); }
+    } else if (agentAction.action === "batch" && agentAction.prompts?.length) {
+      runBatch(agentAction.prompts, agentAction.model || "flux-pro");
+      setCurrentView("canvas");
+    }
+    // Clear URL params after processing
+    window.history.replaceState({}, "", window.location.pathname);
+  }, []);
 
   // Workflow sharing: check URL hash on load
   useEffect(() => {
@@ -2072,6 +2114,12 @@ export default function App() {
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
         </button>
 
+        {/* Agent API */}
+        <button title="Agent API" onClick={() => { setActivePanel(activePanel === "api" ? null : "api"); }}
+          style={{ width: 38, height: 38, borderRadius: 10, border: "none", background: activePanel === "api" ? "#1e1e22" : "transparent", color: activePanel === "api" ? "#c026d3" : "#6b6b75", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        </button>
+
         {/* Marketplace */}
         <button title="Marketplace" onClick={() => { setActivePanel(activePanel === "marketplace" ? null : "marketplace"); }}
           style={{ width: 38, height: 38, borderRadius: 10, border: "none", background: activePanel === "marketplace" ? "#1e1e22" : "transparent", color: activePanel === "marketplace" ? "#c026d3" : "#6b6b75", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }}>
@@ -2092,7 +2140,9 @@ export default function App() {
       {/* Flyout panel */}
       {activePanel && (
         <aside style={{ width: 280, background: "#ffffff", borderRight: "1px solid #ebebee", overflowY: "auto", flexShrink: 0, zIndex: 15, boxShadow: "4px 0 16px rgba(0,0,0,0.03)", display: "flex", flexDirection: "column", animation: "slideFlyout 0.2s ease-out" }}>
-          {activePanel === "prompts" ? (
+          {activePanel === "api" ? (
+            <APIDocsPanel />
+          ) : activePanel === "prompts" ? (
             <PromptLibraryPanel
               onUsePrompt={() => { addToast("Prompt copied!", "success"); }}
               onCreateNode={(p) => {
@@ -2265,7 +2315,7 @@ export default function App() {
 
               <div style={{ fontSize: 10, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.8px", marginTop: 16, marginBottom: 6 }}>About</div>
               <div style={{ fontSize: 11, color: "#6b7280", lineHeight: 1.8 }}>
-                OpenFlow v8.0 — Sprint 8<br />
+                OpenFlow v10.0 — Sprint 10<br />
                 <a href="https://github.com/nikolateslasagent/openflow" target="_blank" rel="noopener" style={{ color: "#c026d3", textDecoration: "none" }}>GitHub</a> · <a href="https://openflow-docs.vercel.app" target="_blank" rel="noopener" style={{ color: "#c026d3", textDecoration: "none" }}>Docs</a>
               </div>
 
@@ -2404,6 +2454,7 @@ export default function App() {
               style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, border: "1px solid #2a2a30", background: "#141416", color: "#9ca3af", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
               👥 Invite
             </button>
+            <NotificationBell notifications={notifications} unreadCount={unreadCount} onOpen={() => setShowNotifPanel(!showNotifPanel)} />
             {/* User avatar & activity indicator */}
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: 4 }}>
               <div style={{ fontSize: 10, color: "#6b6b75" }}>Last edited just now</div>
@@ -2638,6 +2689,24 @@ export default function App() {
         }} />
       )}
       {showTutorial && <TutorialOverlay onDismiss={() => setShowTutorial(false)} />}
+      {showShortcuts && <KeyboardShortcutsModal onClose={() => setShowShortcuts(false)} />}
+      {showNotifPanel && (
+        <NotificationPanel
+          notifications={notifications}
+          onClose={() => setShowNotifPanel(false)}
+          onMarkAllRead={() => { markAllRead(); }}
+          onClear={() => { clearNotifications(); setShowNotifPanel(false); }}
+        />
+      )}
+      <QueuePanel
+        queue={generationQueue.queue}
+        paused={generationQueue.paused}
+        onPauseToggle={() => generationQueue.setPaused(p => !p)}
+        onTogglePriority={generationQueue.togglePriority}
+        onRemove={generationQueue.removeFromQueue}
+        onReorder={generationQueue.reorder}
+        onClearCompleted={generationQueue.clearCompleted}
+      />
       <ToastContainer />
       <style>{`
         @keyframes slideIn { from { transform: translateX(100px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }

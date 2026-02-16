@@ -20,7 +20,7 @@ from sqlalchemy.orm import sessionmaker, declarative_base, Session, relationship
 # ---------------------------------------------------------------------------
 SECRET_KEY = os.environ.get("JWT_SECRET", "openflow-dev-secret-change-in-prod")
 FAL_API_KEY = os.environ.get("FAL_API_KEY", "148ec4ac-aafc-416b-9213-74cacdeefe5e:0dc2faa972e5762ba57fc758b2fd99e8")
-DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./openflow.db")
+DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:////tmp/openflow.db")
 ALGORITHM = "HS256"
 TOKEN_EXPIRE_HOURS = 72
 

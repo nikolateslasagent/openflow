@@ -46,6 +46,7 @@ import { useGenerationQueue, QueuePanel } from "./GenerationQueue";
 import { KeyboardShortcutsModal } from "./KeyboardShortcuts";
 import { parseAgentParams, APIDocsPanel } from "./AgentAPI";
 import { AnalyticsDashboard, UsageQuotasSection, ModelComparisonPanel, WorkflowStatsInline, trackWorkflowRun, incrementDailyUsage } from "./Analytics";
+import { DashboardCardSkeleton, AssetGridSkeleton, GenerationSpinner } from "./SkeletonLoaders";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -783,7 +784,7 @@ function FlowNode({ data, selected }: NodeProps) {
           {def.category === "video" || def.id === "video.img_to_video" ? (
             <video src={outputUrl} controls autoPlay loop muted style={{ width: "100%", maxHeight: 120, borderRadius: 12, objectFit: "cover" }} />
           ) : (
-            <img src={outputUrl} alt="output" style={{ width: "100%", maxHeight: 120, borderRadius: 12, objectFit: "cover", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }} />
+            <img src={outputUrl} alt={`Generated ${def.name} output`} style={{ width: "100%", maxHeight: 120, borderRadius: 12, objectFit: "cover", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }} />
           )}
           <div style={{ fontSize: 9, color: "#9ca3af", textAlign: "center", marginTop: 4 }}>Click to expand</div>
         </div>
@@ -833,7 +834,7 @@ function FlowNode({ data, selected }: NodeProps) {
           <button onClick={() => { setEditing(false); const onRun = data.onRun as (() => void) | undefined; if (onRun) onRun(); }}
             disabled={nodeStatus === "running"}
             style={{ width: "100%", padding: "10px", background: nodeStatus === "running" ? "#e5e7eb" : "#c026d3", color: nodeStatus === "running" ? "#9ca3af" : "#ffffff", border: "none", borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: nodeStatus === "running" ? "not-allowed" : "pointer", transition: "background 0.15s" }}>
-            {nodeStatus === "running" ? "Generating..." : "Generate ✦"}
+            {nodeStatus === "running" ? "⏳ Generating..." : "Generate ✦"}
           </button>
         </div>
       )}
@@ -852,7 +853,7 @@ function FlowNode({ data, selected }: NodeProps) {
           ) : def.category === "video" || def.id === "video.img_to_video" ? (
             <video src={outputUrl} muted style={{ width: "100%", maxHeight: 120, borderRadius: 10, objectFit: "cover" }} />
           ) : (
-            <img src={outputUrl} alt="output" style={{ width: "100%", maxHeight: 120, borderRadius: 10, objectFit: "cover" }} />
+            <img src={outputUrl} alt={`Generated ${def.name} result`} style={{ width: "100%", maxHeight: 120, borderRadius: 10, objectFit: "cover" }} />
           )}
           <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 4 }}><span style={{ color: "#22c55e", fontSize: 12 }}>✓</span><span style={{ fontSize: 9, color: "#9ca3af" }}>Done{def.id !== "text.llm" && def.id !== "tools.prompt_enhancer" ? " · Click to expand" : ""}</span></div>
         </div>
@@ -2216,7 +2217,7 @@ export default function App() {
     <div style={{ display: "flex", height: "100vh", background: "#f0f0f2", color: "#1a1a1a", fontFamily: "'SF Pro Display', 'Inter', -apple-system, 'Helvetica Neue', sans-serif" }}>
 
       {/* Icon strip — dark left toolbar */}
-      <nav style={{ width: 56, background: "#0e0e10", display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 16, paddingBottom: 16, flexShrink: 0, zIndex: 20 }}>
+      <nav aria-label="Main toolbar" role="navigation" style={{ width: 56, background: "#0e0e10", display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 16, paddingBottom: 16, flexShrink: 0, zIndex: 20 }}>
         {/* Logo */}
         <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#c026d3", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, color: "#0e0e10", marginBottom: 24, cursor: "pointer", letterSpacing: "-0.5px" }}
           title="OpenClaw" onClick={() => { setActivePanel(null); setCurrentView("dashboard"); }}>OF</div>
@@ -2516,7 +2517,7 @@ export default function App() {
 
               <div style={{ fontSize: 10, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.8px", marginTop: 16, marginBottom: 6 }}>About</div>
               <div style={{ fontSize: 11, color: "#6b7280", lineHeight: 1.8 }}>
-                OpenFlow v13.0 — Sprint 13<br />
+                OpenFlow v14.0 — Sprint 14<br />
                 <a href="https://github.com/nikolateslasagent/openflow" target="_blank" rel="noopener" style={{ color: "#c026d3", textDecoration: "none" }}>GitHub</a> · <a href="https://openflow-docs.vercel.app" target="_blank" rel="noopener" style={{ color: "#c026d3", textDecoration: "none" }}>Docs</a>
               </div>
 

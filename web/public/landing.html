@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OpenFlow — Open Source AI Video & Image Workflow Builder</title>
+  <meta name="description" content="OpenFlow is a free, open-source visual workflow builder for AI image and video generation. Connect 18+ image models and 14+ video models in a drag-and-drop canvas." />
+  <meta property="og:title" content="OpenFlow — Open Source AI Video & Image Workflow Builder" />
+  <meta property="og:description" content="Free, open-source visual workflow builder for AI image and video generation." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://openflow-ai.vercel.app" />
+  <meta property="og:image" content="https://openflow-ai.vercel.app/og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="OpenFlow — Open Source AI Workflow Builder" />
+  <meta name="twitter:description" content="Free, open-source visual workflow builder for AI image and video generation." />
+  <link rel="canonical" href="https://openflow-ai.vercel.app" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; color: #1a1a1a; background: #ffffff; -webkit-font-smoothing: antialiased; }
+    a { text-decoration: none; color: inherit; }
+
+    /* Hero */
+    .hero { min-height: 90vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 80px 24px 60px; background: linear-gradient(180deg, #fdf4ff 0%, #fff 60%); }
+    .hero-badge { display: inline-flex; align-items: center; gap: 8px; background: #fae8ff; border: 1px solid #f0abfc; border-radius: 20px; padding: 6px 16px; font-size: 12px; font-weight: 600; color: #a21caf; margin-bottom: 24px; }
+    .hero-badge span { width: 8px; height: 8px; border-radius: 50%; background: #c026d3; }
+    .hero h1 { font-size: clamp(36px, 6vw, 64px); font-weight: 800; letter-spacing: -2px; line-height: 1.1; margin-bottom: 20px; background: linear-gradient(135deg, #1a1a1a 0%, #7c3aed 50%, #c026d3 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .hero p { font-size: 18px; color: #6b7280; max-width: 560px; line-height: 1.6; margin-bottom: 40px; }
+    .hero-buttons { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+    .btn-primary { display: inline-flex; align-items: center; gap: 8px; padding: 14px 32px; border-radius: 12px; background: #c026d3; color: #fff; font-size: 16px; font-weight: 700; border: none; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(192,38,211,0.3); }
+    .btn-secondary { display: inline-flex; align-items: center; gap: 8px; padding: 14px 32px; border-radius: 12px; background: #fff; color: #1a1a1a; font-size: 16px; font-weight: 700; border: 1px solid #e5e7eb; cursor: pointer; transition: transform 0.15s; }
+    .btn-secondary:hover { transform: translateY(-2px); border-color: #c026d3; }
+
+    /* Demo placeholder */
+    .demo { max-width: 900px; margin: -40px auto 0; padding: 0 24px; position: relative; z-index: 2; }
+    .demo-frame { background: #0e0e10; border-radius: 16px; border: 1px solid #2a2a30; overflow: hidden; box-shadow: 0 25px 80px rgba(0,0,0,0.15); }
+    .demo-bar { display: flex; gap: 6px; padding: 12px 16px; border-bottom: 1px solid #2a2a30; }
+    .demo-bar span { width: 10px; height: 10px; border-radius: 50%; }
+    .demo-bar span:nth-child(1) { background: #ef4444; }
+    .demo-bar span:nth-child(2) { background: #f59e0b; }
+    .demo-bar span:nth-child(3) { background: #22c55e; }
+    .demo-content { height: 400px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #0e0e12, #1a1a22); color: #6b7280; font-size: 14px; }
+
+    /* Features */
+    .features { padding: 100px 24px; max-width: 1100px; margin: 0 auto; }
+    .features h2 { text-align: center; font-size: 36px; font-weight: 800; letter-spacing: -1px; margin-bottom: 12px; }
+    .features .subtitle { text-align: center; font-size: 16px; color: #6b7280; margin-bottom: 60px; }
+    .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; }
+    .feature-card { padding: 32px; border: 1px solid #f0f0f2; border-radius: 16px; transition: border-color 0.2s, box-shadow 0.2s; }
+    .feature-card:hover { border-color: #c026d3; box-shadow: 0 4px 20px rgba(192,38,211,0.08); }
+    .feature-icon { width: 48px; height: 48px; border-radius: 12px; background: #fdf4ff; display: flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 16px; }
+    .feature-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+    .feature-card p { font-size: 14px; color: #6b7280; line-height: 1.6; }
+
+    /* Comparison */
+    .comparison { padding: 100px 24px; background: #fafafa; }
+    .comparison h2 { text-align: center; font-size: 36px; font-weight: 800; letter-spacing: -1px; margin-bottom: 48px; }
+    .comparison-table { max-width: 900px; margin: 0 auto; overflow-x: auto; }
+    .comparison-table table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.04); }
+    .comparison-table th { padding: 16px 20px; text-align: left; font-size: 13px; font-weight: 700; color: #6b7280; background: #f9fafb; border-bottom: 1px solid #f0f0f2; }
+    .comparison-table td { padding: 14px 20px; font-size: 14px; border-bottom: 1px solid #f0f0f2; }
+    .comparison-table tr:last-child td { border-bottom: none; }
+    .check { color: #22c55e; font-weight: 700; }
+    .cross { color: #d1d5db; }
+    .highlight-col { background: #fdf4ff; }
+
+    /* Pricing */
+    .pricing { padding: 100px 24px; max-width: 1000px; margin: 0 auto; }
+    .pricing h2 { text-align: center; font-size: 36px; font-weight: 800; letter-spacing: -1px; margin-bottom: 48px; }
+    .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; }
+    .pricing-card { padding: 36px; border: 1px solid #f0f0f2; border-radius: 16px; text-align: center; }
+    .pricing-card.featured { border-color: #c026d3; box-shadow: 0 4px 24px rgba(192,38,211,0.1); position: relative; }
+    .pricing-card.featured::before { content: "MOST POPULAR"; position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: #c026d3; color: #fff; font-size: 10px; font-weight: 700; padding: 4px 12px; border-radius: 8px; letter-spacing: 0.5px; }
+    .pricing-card h3 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+    .pricing-card .price { font-size: 40px; font-weight: 800; margin-bottom: 4px; }
+    .pricing-card .price-sub { font-size: 14px; color: #9ca3af; margin-bottom: 24px; }
+    .pricing-card ul { list-style: none; text-align: left; margin-bottom: 24px; }
+    .pricing-card li { padding: 8px 0; font-size: 14px; color: #4b5563; display: flex; align-items: center; gap: 8px; }
+    .pricing-card li::before { content: "✓"; color: #c026d3; font-weight: 700; }
+
+    /* Footer */
+    footer { padding: 60px 24px; background: #0e0e10; color: #9ca3af; }
+    .footer-inner { max-width: 1100px; margin: 0 auto; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 40px; }
+    .footer-brand { max-width: 300px; }
+    .footer-brand h4 { color: #fff; font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+    .footer-links h5 { color: #fff; font-size: 13px; font-weight: 700; margin-bottom: 12px; }
+    .footer-links a { display: block; font-size: 13px; color: #9ca3af; margin-bottom: 8px; transition: color 0.15s; }
+    .footer-links a:hover { color: #c026d3; }
+    .footer-bottom { max-width: 1100px; margin: 40px auto 0; padding-top: 24px; border-top: 1px solid #1e1e22; font-size: 12px; color: #6b7280; text-align: center; }
+
+    @media (max-width: 640px) {
+      .hero { padding: 60px 16px 40px; }
+      .features-grid { grid-template-columns: 1fr; }
+      .pricing-grid { grid-template-columns: 1fr; }
+      .demo-content { height: 240px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Nav -->
+  <nav style="position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,0.9);backdrop-filter:blur(12px);border-bottom:1px solid #f0f0f2;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;max-width:1200px;margin:0 auto">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="width:32px;height:32px;border-radius:50%;background:#c026d3;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff">OF</div>
+      <span style="font-size:16px;font-weight:700;letter-spacing:-0.5px">OpenFlow</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:24px">
+      <a href="#features" style="font-size:13px;font-weight:500;color:#6b7280">Features</a>
+      <a href="#comparison" style="font-size:13px;font-weight:500;color:#6b7280">Compare</a>
+      <a href="#pricing" style="font-size:13px;font-weight:500;color:#6b7280">Pricing</a>
+      <a href="https://github.com/nikolateslasagent/openflow" target="_blank" rel="noopener" style="font-size:13px;font-weight:500;color:#6b7280">GitHub</a>
+      <a href="/" class="btn-primary" style="padding:8px 20px;font-size:13px;border-radius:8px">Get Started Free →</a>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-badge"><span></span> 100% Open Source · No Markup on API Costs</div>
+    <h1>OpenFlow — Open Source AI Video & Image Workflow Builder</h1>
+    <p>Build powerful AI creative workflows visually. Connect 18+ image models and 14+ video models in a drag-and-drop canvas. Free forever.</p>
+    <div class="hero-buttons">
+      <a href="/" class="btn-primary">Get Started Free →</a>
+      <a href="https://github.com/nikolateslasagent/openflow" target="_blank" rel="noopener" class="btn-secondary">⭐ Star on GitHub</a>
+    </div>
+  </section>
+
+  <!-- Demo -->
+  <div class="demo">
+    <div class="demo-frame">
+      <div class="demo-bar"><span></span><span></span><span></span></div>
+      <div class="demo-content">
+        <div style="text-align:center">
+          <div style="font-size:48px;margin-bottom:12px">🎨</div>
+          <div style="font-size:16px;font-weight:600;color:#e5e7eb">Visual AI Workflow Canvas</div>
+          <div style="font-size:12px;color:#4b5563;margin-top:4px">Drag nodes · Connect models · Generate anything</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Features -->
+  <section class="features" id="features">
+    <h2>Everything you need to create</h2>
+    <p class="subtitle">From text-to-image to full video production — all in one open-source tool.</p>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">🖼️</div>
+        <h3>18+ Image Models</h3>
+        <p>Flux Pro, DALL·E 3, Stable Diffusion 3.5, Imagen 4, Ideogram v3, Recraft v3 and more — all accessible from one canvas.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🎬</div>
+        <h3>14+ Video Models</h3>
+        <p>Kling 3.0, Wan 2.1, MiniMax Hailuo, Hunyuan, Luma Ray 2, Veo 3.1 — generate cinematic video from text or images.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔗</div>
+        <h3>Visual Node Editor</h3>
+        <p>Drag-and-drop nodes, connect them with wires. Data flows from one model to the next. No code required.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">⚡</div>
+        <h3>Batch Processing</h3>
+        <p>Generate hundreds of variations in one click. Batch prompts, A/B test models, and export results automatically.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🎯</div>
+        <h3>Advanced Tools</h3>
+        <p>Upscaling, inpainting, background removal, style transfer, ControlNet, outpainting — all built-in as nodes.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🤖</div>
+        <h3>Agent API</h3>
+        <p>Trigger workflows from any app via URL parameters or API. Automate your creative pipeline with webhooks.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Comparison -->
+  <section class="comparison" id="comparison">
+    <h2>How OpenFlow compares</h2>
+    <div class="comparison-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th class="highlight-col">OpenFlow</th>
+            <th>ComfyUI</th>
+            <th>RunwayML</th>
+            <th>Pika</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Open Source</td><td class="highlight-col"><span class="check">✓ Yes</span></td><td><span class="check">✓ Yes</span></td><td><span class="cross">✗</span></td><td><span class="cross">✗</span></td></tr>
+          <tr><td>Visual Node Editor</td><td class="highlight-col"><span class="check">✓ Yes</span></td><td><span class="check">✓ Yes</span></td><td><span class="cross">✗</span></td><td><span class="cross">✗</span></td></tr>
+          <tr><td>Cloud-based (no install)</td><td class="highlight-col"><span class="check">✓ Yes</span></td><td><span class="cross">✗ Local</span></td><td><span class="check">✓ Yes</span></td><td><span class="check">✓ Yes</span></td></tr>
+          <tr><td>Multiple AI Providers</td><td class="highlight-col"><span class="check">✓ 30+ models</span></td><td>Community</td><td>Proprietary</td><td>Proprietary</td></tr>
+          <tr><td>Video Generation</td><td class="highlight-col"><span class="check">✓ 14 models</span></td><td>Limited</td><td><span class="check">✓ Gen-3</span></td><td><span class="check">✓ Pika 1.0</span></td></tr>
+          <tr><td>No Markup Pricing</td><td class="highlight-col"><span class="check">✓ BYO Keys</span></td><td><span class="check">✓ Free</span></td><td><span class="cross">✗ $$$</span></td><td><span class="cross">✗ $$$</span></td></tr>
+          <tr><td>Beginner Friendly</td><td class="highlight-col"><span class="check">✓ Very</span></td><td><span class="cross">✗ Complex</span></td><td><span class="check">✓ Yes</span></td><td><span class="check">✓ Yes</span></td></tr>
+          <tr><td>Batch Processing</td><td class="highlight-col"><span class="check">✓ Built-in</span></td><td>Extensions</td><td><span class="cross">✗</span></td><td><span class="cross">✗</span></td></tr>
+          <tr><td>Storyboard Mode</td><td class="highlight-col"><span class="check">✓ Yes</span></td><td><span class="cross">✗</span></td><td><span class="cross">✗</span></td><td><span class="check">✓ Scenes</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Pricing -->
+  <section class="pricing" id="pricing">
+    <h2>Simple, transparent pricing</h2>
+    <div class="pricing-grid">
+      <div class="pricing-card featured">
+        <h3>Free</h3>
+        <div class="price">$0</div>
+        <div class="price-sub">forever · open source</div>
+        <ul>
+          <li>Unlimited workflows</li>
+          <li>All 30+ AI models</li>
+          <li>Batch processing</li>
+          <li>Storyboard & Timeline</li>
+          <li>Bring your own API keys</li>
+          <li>Community support</li>
+        </ul>
+        <a href="/" class="btn-primary" style="width:100%;justify-content:center">Get Started Free</a>
+      </div>
+      <div class="pricing-card">
+        <h3>Pro</h3>
+        <div class="price" style="color:#9ca3af">TBD</div>
+        <div class="price-sub">coming soon</div>
+        <ul>
+          <li>Everything in Free</li>
+          <li>Hosted API keys (no setup)</li>
+          <li>Priority generation queue</li>
+          <li>Team collaboration</li>
+          <li>Custom model fine-tuning</li>
+          <li>Priority support</li>
+        </ul>
+        <button class="btn-secondary" style="width:100%;justify-content:center" disabled>Coming Soon</button>
+      </div>
+      <div class="pricing-card">
+        <h3>Enterprise</h3>
+        <div class="price" style="color:#9ca3af">Custom</div>
+        <div class="price-sub">coming soon</div>
+        <ul>
+          <li>Everything in Pro</li>
+          <li>Self-hosted deployment</li>
+          <li>SSO / SAML</li>
+          <li>SLA & dedicated support</li>
+          <li>Custom integrations</li>
+          <li>Volume discounts</li>
+        </ul>
+        <button class="btn-secondary" style="width:100%;justify-content:center" disabled>Contact Us</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <h4>OpenFlow</h4>
+        <p style="font-size:13px;line-height:1.6">Open-source AI video & image workflow builder. Create anything with 30+ AI models in a visual canvas.</p>
+      </div>
+      <div class="footer-links">
+        <h5>Product</h5>
+        <a href="/">App</a>
+        <a href="#features">Features</a>
+        <a href="#comparison">Compare</a>
+        <a href="#pricing">Pricing</a>
+      </div>
+      <div class="footer-links">
+        <h5>Resources</h5>
+        <a href="https://github.com/nikolateslasagent/openflow" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://openflow-docs.vercel.app" target="_blank" rel="noopener">Documentation</a>
+        <a href="https://github.com/nikolateslasagent/openflow/issues" target="_blank" rel="noopener">Report Bug</a>
+      </div>
+      <div class="footer-links">
+        <h5>Community</h5>
+        <a href="#">Discord (coming soon)</a>
+        <a href="#">Twitter (coming soon)</a>
+      </div>
+    </div>
+    <div class="footer-bottom">© 2025 OpenFlow. Open source under MIT License.</div>
+  </footer>
+
+</body>
+</html>

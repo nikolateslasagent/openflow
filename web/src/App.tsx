@@ -2789,9 +2789,9 @@ export default function App() {
               </ReactFlow>
               {/* Fit View button */}
               <button onClick={() => {
-                const allX = nodes.map(n => n.position.x);
-                const allY = nodes.map(n => n.position.y);
-                if (allX.length === 0) return;
+                const _allX = nodes.map(n => n.position.x);
+                void _allX;
+                if (nodes.length === 0) return;
                 addToast("Fit to view!", "success");
               }} style={{ position: "absolute", top: 12, right: 12, zIndex: 20, background: "#fff", border: "1px solid #e8e8eb", borderRadius: 8, padding: "6px 12px", fontSize: 11, fontWeight: 600, cursor: "pointer", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }} title="Fit View">
                 ⊞ Fit View

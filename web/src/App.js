@@ -11,6 +11,7 @@ import { ModelManagerPanel } from "./ModelManager";
 import { WorkflowTemplatesPanel } from "./WorkflowTemplates";
 import { saveTrainingRecord, getTrainingDataCount, exportTrainingData, getTrainingRecords, clearTrainingData } from "./TrainingData";
 import { useToast } from "./Toast";
+import { StoryboardView } from "./Storyboard";
 // ---------------------------------------------------------------------------
 // Node definitions with real parameters
 // ---------------------------------------------------------------------------
@@ -262,6 +263,18 @@ const NODE_DEFS = [
         ],
     },
     {
+        id: "image.input",
+        name: "Image Input",
+        description: "Upload or drop an image",
+        category: "input",
+        icon: "📷",
+        color: "#6366f1",
+        inputs: [
+            { name: "image_url", type: "string", description: "Image URL or data URL", required: true },
+        ],
+        outputs: [{ name: "image", type: "image", description: "Image output" }],
+    },
+    {
         id: "tools.controlnet",
         name: "ControlNet",
         description: "Guided generation with control image",
@@ -321,6 +334,7 @@ const NODE_ICONS = {
     "tools.bg_remover": `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`,
     "tools.face_swap": `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>`,
     "tools.inpainting": `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/></svg>`,
+    "image.input": `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>`,
     "tools.controlnet": `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="21.17" y1="8" x2="12" y2="8"/><line x1="3.95" y1="6.06" x2="8.54" y2="14"/><line x1="10.88" y1="21.94" x2="15.46" y2="14"/></svg>`,
 };
 function groupByCategory(defs) {
@@ -455,11 +469,14 @@ function FlowNode({ data, selected }) {
     const nodeStatus = data.status;
     const [showMenu, setShowMenu] = useState(false);
     const [editing, setEditing] = useState(true);
+    const onPreview = data.onPreview;
+    const isExecuting = data.isExecuting;
     const isComplete = nodeStatus === "done" && outputUrl;
+    const isFailed = typeof nodeStatus === "string" && nodeStatus.startsWith("Error");
     const showForm = editing || !isComplete;
     const cardStyle = {
         background: "#ffffff",
-        border: selected ? "1.5px solid #d1d5db" : "1px solid #e8e8eb",
+        border: isExecuting ? "2px solid #f59e0b" : isFailed ? "2px solid #ef4444" : isComplete && !showForm ? "2px solid #22c55e" : selected ? "1.5px solid #d1d5db" : "1px solid #e8e8eb",
         borderRadius: 16,
         minWidth: 260,
         maxWidth: 360,
@@ -484,10 +501,12 @@ function FlowNode({ data, selected }) {
                                                 onRun(); setShowMenu(false); } },
                                         { label: "Delete", action: () => { const onDelete = data.onDelete; if (onDelete)
                                                 onDelete(); setShowMenu(false); } },
-                                    ].map((item) => (_jsx("button", { onClick: item.action, style: { width: "100%", padding: "10px 14px", border: "none", background: "transparent", fontSize: 12, fontWeight: 500, color: item.label === "Delete" ? "#ef4444" : "#1a1a1a", cursor: "pointer", textAlign: "left" }, onMouseOver: (e) => { e.currentTarget.style.background = "#f5f5f7"; }, onMouseOut: (e) => { e.currentTarget.style.background = "transparent"; }, children: item.label }, item.label))) }))] })] }), _jsxs("div", { style: { padding: "0 18px 10px", fontSize: 12, color: "#6b7280", lineHeight: 2 }, children: [dur && _jsxs("div", { children: ["\u23F1 ", dur] }), aspectRatio && _jsxs("div", { children: ["\u25A2 ", aspectRatio] }), resolution && _jsxs("div", { children: ["\u25EB ", resolution] }), _jsxs("div", { children: ["\u25CE ", model] }), _jsx("div", { style: { color: "#9ca3af", fontSize: 11, marginTop: 4, fontStyle: "italic" }, children: prompt.length > 60 ? prompt.slice(0, 60) + "..." : prompt })] }), _jsx("div", { style: { padding: "0 18px 16px" }, children: def.category === "video" || def.id === "video.img_to_video" ? (_jsx("video", { src: outputUrl, controls: true, autoPlay: true, loop: true, muted: true, style: { width: "100%", borderRadius: 12 } })) : (_jsx("img", { src: outputUrl, alt: "output", style: { width: "100%", borderRadius: 12, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" } })) }), def.inputs.length > 0 && _jsx(Handle, { type: "target", position: Position.Left, id: "in", style: { width: 10, height: 10, background: "#d1d5db", border: "2px solid #ffffff", left: -6, top: "50%", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" } }), def.outputs.length > 0 && _jsx(Handle, { type: "source", position: Position.Right, id: "out", style: { width: 10, height: 10, background: "#d1d5db", border: "2px solid #ffffff", right: -6, top: "50%", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" } })] }));
+                                    ].map((item) => (_jsx("button", { onClick: item.action, style: { width: "100%", padding: "10px 14px", border: "none", background: "transparent", fontSize: 12, fontWeight: 500, color: item.label === "Delete" ? "#ef4444" : "#1a1a1a", cursor: "pointer", textAlign: "left" }, onMouseOver: (e) => { e.currentTarget.style.background = "#f5f5f7"; }, onMouseOut: (e) => { e.currentTarget.style.background = "transparent"; }, children: item.label }, item.label))) }))] })] }), _jsxs("div", { style: { padding: "0 18px 10px", fontSize: 12, color: "#6b7280", lineHeight: 2 }, children: [dur && _jsxs("div", { children: ["\u23F1 ", dur] }), aspectRatio && _jsxs("div", { children: ["\u25A2 ", aspectRatio] }), resolution && _jsxs("div", { children: ["\u25EB ", resolution] }), _jsxs("div", { children: ["\u25CE ", model] }), _jsx("div", { style: { color: "#9ca3af", fontSize: 11, marginTop: 4, fontStyle: "italic" }, children: prompt.length > 60 ? prompt.slice(0, 60) + "..." : prompt })] }), _jsxs("div", { style: { padding: "0 18px 16px", cursor: "pointer" }, onClick: () => { const isVid = def.category === "video" || def.id === "video.img_to_video"; if (onPreview && outputUrl)
+                        onPreview(outputUrl, isVid ? "video" : "image"); }, children: [def.category === "video" || def.id === "video.img_to_video" ? (_jsx("video", { src: outputUrl, controls: true, autoPlay: true, loop: true, muted: true, style: { width: "100%", maxHeight: 120, borderRadius: 12, objectFit: "cover" } })) : (_jsx("img", { src: outputUrl, alt: "output", style: { width: "100%", maxHeight: 120, borderRadius: 12, objectFit: "cover", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" } })), _jsx("div", { style: { fontSize: 9, color: "#9ca3af", textAlign: "center", marginTop: 4 }, children: "Click to expand" })] }), def.inputs.length > 0 && _jsx(Handle, { type: "target", position: Position.Left, id: "in", style: { width: 10, height: 10, background: "#d1d5db", border: "2px solid #ffffff", left: -6, top: "50%", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" } }), def.outputs.length > 0 && _jsx(Handle, { type: "source", position: Position.Right, id: "out", style: { width: 10, height: 10, background: "#d1d5db", border: "2px solid #ffffff", right: -6, top: "50%", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" } })] }));
     }
     return (_jsxs("div", { style: cardStyle, children: [_jsxs("div", { style: { padding: "14px 18px 10px", display: "flex", alignItems: "center", gap: 8 }, children: [_jsx("span", { style: { color: "#6b7280", display: "flex" }, dangerouslySetInnerHTML: { __html: NODE_ICONS[def.id] || "" } }), _jsx("span", { style: { fontSize: 12, fontWeight: 600, color: "#1a1a1a", letterSpacing: "-0.2px" }, children: def.name })] }), def.inputs.length > 0 && _jsx(Handle, { type: "target", position: Position.Left, id: "in", style: { width: 10, height: 10, background: "#d1d5db", border: "2px solid #ffffff", left: -6, top: "50%", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" } }), _jsx("div", { className: "nodrag nowheel", style: { padding: "4px 0 12px" }, children: def.inputs.map((inp) => (_jsxs("div", { style: { padding: "3px 18px" }, children: [_jsx("div", { style: { fontSize: 10, fontWeight: 500, color: "#9ca3af", marginBottom: 3 }, children: inp.description }), inp.type === "string" && !inp.options && (inp.name === "prompt" || inp.name === "system" || inp.name === "text" ? (_jsx("textarea", { onKeyDown: stopKeys, value: values[inp.name] || "", onChange: (e) => onChange(inp.name, e.target.value), placeholder: inp.description, rows: 3, style: { width: "100%", background: "#f5f5f7", border: "none", borderRadius: 10, color: "#1a1a1a", fontSize: 14, padding: "10px 14px", resize: "vertical", outline: "none", fontFamily: "inherit", lineHeight: 1.5 } })) : (_jsx("input", { onKeyDown: stopKeys, type: "text", value: values[inp.name] || "", onChange: (e) => onChange(inp.name, e.target.value), placeholder: inp.description, style: { width: "100%", background: "#f5f5f7", border: "none", borderRadius: 10, color: "#1a1a1a", fontSize: 13, padding: "8px 14px", outline: "none" } }))), inp.options && (_jsx("select", { onKeyDown: stopKeys, value: String(values[inp.name] ?? inp.default ?? ""), onChange: (e) => onChange(inp.name, e.target.value), style: { width: "100%", background: "#f5f5f7", border: "none", borderRadius: 10, color: "#1a1a1a", fontSize: 13, padding: "8px 14px", outline: "none", cursor: "pointer", WebkitAppearance: "none" }, children: inp.options.map((opt) => (_jsx("option", { value: opt, children: opt }, opt))) })), (inp.type === "integer" || inp.type === "float") && !inp.options && (_jsx("input", { onKeyDown: stopKeys, type: "number", value: String(values[inp.name] ?? inp.default ?? ""), onChange: (e) => onChange(inp.name, inp.type === "float" ? parseFloat(e.target.value) : parseInt(e.target.value)), step: inp.type === "float" ? 0.1 : 1, style: { width: "100%", background: "#f5f5f7", border: "none", borderRadius: 10, color: "#1a1a1a", fontSize: 13, padding: "8px 14px", outline: "none" } }))] }, inp.name))) }), def.inputs.some((inp) => inp.name === "model") && (_jsx("div", { style: { padding: "4px 18px 8px" }, children: _jsx("button", { onClick: () => { setEditing(false); const onRun = data.onRun; if (onRun)
-                        onRun(); }, disabled: nodeStatus === "running", style: { width: "100%", padding: "10px", background: nodeStatus === "running" ? "#e5e7eb" : "#c026d3", color: nodeStatus === "running" ? "#9ca3af" : "#ffffff", border: "none", borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: nodeStatus === "running" ? "not-allowed" : "pointer", transition: "background 0.15s" }, children: nodeStatus === "running" ? "Generating..." : "Generate ✦" }) })), nodeStatus && nodeStatus !== "done" && (_jsxs("div", { style: { padding: "8px 18px 12px", fontSize: 11, fontWeight: 500, color: nodeStatus === "running" ? "#92400e" : "#991b1b", display: "flex", alignItems: "center", gap: 6 }, children: [_jsx("span", { style: { width: 5, height: 5, borderRadius: "50%", background: nodeStatus === "running" ? "#f59e0b" : "#ef4444" } }), nodeStatus === "running" ? "Generating..." : nodeStatus] })), def.outputs.length > 0 && _jsx(Handle, { type: "source", position: Position.Right, id: "out", style: { width: 10, height: 10, background: "#d1d5db", border: "2px solid #ffffff", right: -6, top: "50%", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" } })] }));
+                        onRun(); }, disabled: nodeStatus === "running", style: { width: "100%", padding: "10px", background: nodeStatus === "running" ? "#e5e7eb" : "#c026d3", color: nodeStatus === "running" ? "#9ca3af" : "#ffffff", border: "none", borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: nodeStatus === "running" ? "not-allowed" : "pointer", transition: "background 0.15s" }, children: nodeStatus === "running" ? "Generating..." : "Generate ✦" }) })), nodeStatus && nodeStatus !== "done" && (_jsxs("div", { style: { padding: "8px 18px 12px", fontSize: 11, fontWeight: 500, color: nodeStatus === "running" ? "#92400e" : "#991b1b", display: "flex", alignItems: "center", gap: 6 }, children: [_jsx("span", { style: { width: 5, height: 5, borderRadius: "50%", background: nodeStatus === "running" ? "#f59e0b" : "#ef4444" } }), nodeStatus === "running" ? "Generating..." : nodeStatus] })), nodeStatus === "done" && outputUrl && (_jsxs("div", { style: { padding: "4px 18px 12px", cursor: "pointer" }, onClick: () => { const isVid = def.category === "video" || def.id === "video.img_to_video"; if (onPreview && outputUrl)
+                    onPreview(outputUrl, isVid ? "video" : "image"); }, children: [def.category === "video" || def.id === "video.img_to_video" ? (_jsx("video", { src: outputUrl, muted: true, style: { width: "100%", maxHeight: 120, borderRadius: 10, objectFit: "cover" } })) : (_jsx("img", { src: outputUrl, alt: "output", style: { width: "100%", maxHeight: 120, borderRadius: 10, objectFit: "cover" } })), _jsxs("div", { style: { display: "flex", alignItems: "center", gap: 4, marginTop: 4 }, children: [_jsx("span", { style: { color: "#22c55e", fontSize: 12 }, children: "\u2713" }), _jsx("span", { style: { fontSize: 9, color: "#9ca3af" }, children: "Done \u00B7 Click to expand" })] })] })), isFailed && (_jsxs("div", { style: { padding: "4px 18px 8px", display: "flex", alignItems: "center", gap: 4 }, children: [_jsx("span", { style: { color: "#ef4444", fontSize: 12 }, children: "\u2717" }), _jsx("span", { style: { fontSize: 9, color: "#ef4444" }, children: "Failed" })] })), def.outputs.length > 0 && _jsx(Handle, { type: "source", position: Position.Right, id: "out", style: { width: 10, height: 10, background: "#d1d5db", border: "2px solid #ffffff", right: -6, top: "50%", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" } })] }));
 }
 const nodeTypes = { flowNode: FlowNode };
 // ---------------------------------------------------------------------------
@@ -668,10 +687,61 @@ export default function App() {
     const [falApiKey, setFalApiKey] = useState(() => localStorage.getItem("openflow_fal_key") || "148ec4ac-aafc-416b-9213-74cacdeefe5e:0dc2faa972e5762ba57fc758b2fd99e8");
     const [assets, setAssets] = useState(() => getAssets());
     const [darkMode, setDarkMode] = useState(() => localStorage.getItem("openflow_dark") === "true");
+    const [executionProgress, setExecutionProgress] = useState(null);
+    const cancelRef = useRef(false);
+    const [previewModal, setPreviewModal] = useState(null);
+    // Undo/Redo
+    const [undoStack, setUndoStack] = useState([]);
+    const [redoStack, setRedoStack] = useState([]);
+    const skipHistoryRef = useRef(false);
     const idCounter = useRef(0);
     const { addToast, ToastContainer } = useToast();
     const grouped = useMemo(() => groupByCategory(NODE_DEFS), []);
     const refreshAssets = useCallback(() => setAssets(getAssets()), []);
+    // Push to undo stack on meaningful changes
+    const pushUndo = useCallback(() => {
+        setUndoStack(prev => {
+            const snap = { nodes: JSON.parse(JSON.stringify(nodes)), edges: JSON.parse(JSON.stringify(edges)) };
+            const next = [...prev, snap];
+            if (next.length > 50)
+                next.shift();
+            return next;
+        });
+        setRedoStack([]);
+    }, [nodes, edges]);
+    const undo = useCallback(() => {
+        setUndoStack(prev => {
+            if (prev.length === 0)
+                return prev;
+            const newStack = [...prev];
+            const state = newStack.pop();
+            setRedoStack(r => [...r, { nodes: JSON.parse(JSON.stringify(nodes)), edges: JSON.parse(JSON.stringify(edges)) }]);
+            skipHistoryRef.current = true;
+            // Restore nodes with handlers
+            const restoredNodes = state.nodes.map((n) => {
+                return { ...n, data: { ...n.data, onChange: (key, val) => updateNodeValue(n.id, key, val), onRun: () => runSingleNodeRef.current(n.id), onDelete: () => setNodes((nds) => nds.filter((nd) => nd.id !== n.id)), onPreview: (url, type) => setPreviewModal({ url, type }) } };
+            });
+            setNodes(restoredNodes);
+            setEdges(state.edges);
+            return newStack;
+        });
+    }, [nodes, edges, setNodes, setEdges]);
+    const redo = useCallback(() => {
+        setRedoStack(prev => {
+            if (prev.length === 0)
+                return prev;
+            const newStack = [...prev];
+            const state = newStack.pop();
+            setUndoStack(u => [...u, { nodes: JSON.parse(JSON.stringify(nodes)), edges: JSON.parse(JSON.stringify(edges)) }]);
+            skipHistoryRef.current = true;
+            const restoredNodes = state.nodes.map((n) => {
+                return { ...n, data: { ...n.data, onChange: (key, val) => updateNodeValue(n.id, key, val), onRun: () => runSingleNodeRef.current(n.id), onDelete: () => setNodes((nds) => nds.filter((nd) => nd.id !== n.id)), onPreview: (url, type) => setPreviewModal({ url, type }) } };
+            });
+            setNodes(restoredNodes);
+            setEdges(state.edges);
+            return newStack;
+        });
+    }, [nodes, edges, setNodes, setEdges]);
     const onConnect = useCallback((connection) => {
         setEdges((eds) => addEdge({ ...connection, animated: false, type: "smoothstep", style: { stroke: "#d1d5db", strokeWidth: 1.5 } }, eds));
     }, [setEdges]);
@@ -706,7 +776,8 @@ export default function App() {
                 def, values: defaults,
                 onChange: (key, val) => updateNodeValue(nodeId, key, val),
                 onRun: () => runSingleNodeRef.current(nodeId),
-                onDelete: () => setNodes((nds) => nds.filter((n) => n.id !== nodeId)),
+                onDelete: () => { pushUndo(); setNodes((nds) => nds.filter((n) => n.id !== nodeId)); },
+                onPreview: (url, type) => setPreviewModal({ url, type }),
             },
         };
         setNodes((nds) => [...nds, newNode]);
@@ -750,7 +821,9 @@ export default function App() {
         }
         localStorage.setItem("openflow_fal_key", falApiKey);
         setIsRunning(true);
-        // Topological sort for dependency order
+        cancelRef.current = false;
+        pushUndo();
+        // Topological sort — include all nodes with a "model" input
         const genNodes = nodes.filter((n) => {
             const def = n.data.def;
             return def.inputs.some((inp) => inp.name === "model");
@@ -776,18 +849,77 @@ export default function App() {
                     queue.push(next);
             }
         }
-        // Add any remaining (cycles)
         nodeIds.forEach(id => { if (!sorted.includes(id))
             sorted.push(id); });
-        for (const nodeId of sorted) {
+        // Track outputs for data flow
+        const outputMap = {};
+        const log = [];
+        for (let i = 0; i < sorted.length; i++) {
+            if (cancelRef.current) {
+                log.push("⛔ Cancelled by user");
+                setExecutionProgress(prev => prev ? { ...prev, log: [...log] } : null);
+                break;
+            }
+            const nodeId = sorted[i];
             const node = genNodes.find(n => n.id === nodeId);
             if (!node)
                 continue;
+            const def = node.data.def;
+            // Pass output from connected source nodes into this node's inputs
+            const incomingEdges = edges.filter(e => e.target === nodeId);
+            for (const edge of incomingEdges) {
+                const sourceUrl = outputMap[edge.source];
+                if (sourceUrl) {
+                    // Find the source node to determine output type
+                    const sourceNode = nodes.find(n => n.id === edge.source);
+                    const sourceDef = sourceNode?.data.def;
+                    const sourceOutputType = sourceDef?.outputs[0]?.type;
+                    // Map source output to appropriate target input
+                    if (sourceOutputType === "image" || sourceOutputType === "string") {
+                        // Find the best input to fill: image_url, image, prompt, text, input
+                        const imageInputs = ["image_url", "image", "source_url", "target_url"];
+                        const textInputs = ["prompt", "text", "input"];
+                        const targetInputNames = def.inputs.map(inp => inp.name);
+                        if (sourceOutputType === "image") {
+                            const imgField = imageInputs.find(f => targetInputNames.includes(f));
+                            if (imgField) {
+                                updateNodeValue(nodeId, imgField, sourceUrl);
+                                log.push(`📎 Passed image from ${edge.source} → ${nodeId}.${imgField}`);
+                            }
+                        }
+                        else {
+                            const txtField = textInputs.find(f => targetInputNames.includes(f));
+                            if (txtField) {
+                                updateNodeValue(nodeId, txtField, sourceUrl);
+                                log.push(`📎 Passed text from ${edge.source} → ${nodeId}.${txtField}`);
+                            }
+                        }
+                    }
+                }
+            }
+            setExecutionProgress({ current: i + 1, total: sorted.length, currentNodeId: nodeId, log: [...log] });
+            setNodeData(nodeId, { isExecuting: true });
+            log.push(`▶ Running ${def.name}...`);
+            setExecutionProgress({ current: i + 1, total: sorted.length, currentNodeId: nodeId, log: [...log] });
             await runSingleNode(nodeId);
+            // Grab output URL from node data after run
+            setNodes(nds => {
+                const n = nds.find(nd => nd.id === nodeId);
+                if (n?.data.outputUrl) {
+                    outputMap[nodeId] = n.data.outputUrl;
+                    log.push(`✅ ${def.name} complete`);
+                }
+                else if (n?.data.status && n.data.status.startsWith("Error")) {
+                    log.push(`❌ ${def.name} failed`);
+                }
+                return nds.map(nd => nd.id === nodeId ? { ...nd, data: { ...nd.data, isExecuting: false } } : nd);
+            });
         }
         setIsRunning(false);
-        addToast("All nodes complete!", "success");
-    }, [nodes, edges, falApiKey, runSingleNode, addToast]);
+        setExecutionProgress(null);
+        if (!cancelRef.current)
+            addToast("All nodes complete!", "success");
+    }, [nodes, edges, falApiKey, runSingleNode, addToast, pushUndo, setNodeData, updateNodeValue, setNodes]);
     // Keyboard shortcuts
     useEffect(() => {
         const handler = (e) => {
@@ -801,8 +933,20 @@ export default function App() {
             }
             if (e.key === "Delete" || e.key === "Backspace") {
                 const selected = nodes.filter(n => n.selected);
-                if (selected.length)
+                if (selected.length) {
+                    pushUndo();
                     setNodes(nds => nds.filter(n => !n.selected));
+                }
+            }
+            if (e.key === "z" && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
+                e.preventDefault();
+                undo();
+                return;
+            }
+            if (e.key === "z" && (e.ctrlKey || e.metaKey) && e.shiftKey) {
+                e.preventDefault();
+                redo();
+                return;
             }
             if (e.key === "s" && (e.ctrlKey || e.metaKey)) {
                 e.preventDefault();
@@ -831,7 +975,38 @@ export default function App() {
         };
         window.addEventListener("keydown", handler);
         return () => window.removeEventListener("keydown", handler);
-    }, [nodes, setNodes, addToast]);
+    }, [nodes, setNodes, addToast, undo, redo]);
+    // Clipboard paste for images (Ctrl+V)
+    useEffect(() => {
+        const handlePaste = (e) => {
+            const items = e.clipboardData?.items;
+            if (!items)
+                return;
+            for (const item of Array.from(items)) {
+                if (item.type.startsWith("image/")) {
+                    e.preventDefault();
+                    const file = item.getAsFile();
+                    if (!file)
+                        return;
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                        const dataUrl = reader.result;
+                        const def = NODE_DEFS.find(d => d.id === "image.input");
+                        if (def) {
+                            pushUndo();
+                            addNodeWithHandler(def, { image_url: dataUrl });
+                            setCurrentView("canvas");
+                            addToast("Image pasted as node!", "success");
+                        }
+                    };
+                    reader.readAsDataURL(file);
+                    break;
+                }
+            }
+        };
+        window.addEventListener("paste", handlePaste);
+        return () => window.removeEventListener("paste", handlePaste);
+    }, [addNodeWithHandler, pushUndo, addToast]);
     // Export workflow as JSON
     const exportWorkflow = useCallback(() => {
         const workflow = { nodes: nodes.map(n => ({ id: n.id, type: n.type, position: n.position, defId: n.data.def.id, values: n.data.values })), edges };
@@ -854,6 +1029,40 @@ export default function App() {
     };
     const onDrop = useCallback((e) => {
         e.preventDefault();
+        // Handle file drops (images)
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            const file = e.dataTransfer.files[0];
+            if (file.type.startsWith("image/")) {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const dataUrl = reader.result;
+                    const def = NODE_DEFS.find(d => d.id === "image.input");
+                    if (def) {
+                        pushUndo();
+                        idCounter.current += 1;
+                        const nodeId = `${def.id}_${idCounter.current}`;
+                        const bounds = e.target.closest(".react-flow")?.getBoundingClientRect();
+                        const x = bounds ? e.clientX - bounds.left : e.clientX;
+                        const y = bounds ? e.clientY - bounds.top : e.clientY;
+                        const newNode = {
+                            id: nodeId, type: "flowNode", position: { x, y },
+                            data: {
+                                def, values: { image_url: dataUrl },
+                                onChange: (key, val) => updateNodeValue(nodeId, key, val),
+                                onRun: () => runSingleNodeRef.current(nodeId),
+                                onDelete: () => setNodes((nds) => nds.filter((n) => n.id !== nodeId)),
+                                onPreview: (url, type) => setPreviewModal({ url, type }),
+                                outputUrl: dataUrl, status: "done",
+                            },
+                        };
+                        setNodes((nds) => [...nds, newNode]);
+                        addToast("Image dropped as node!", "success");
+                    }
+                };
+                reader.readAsDataURL(file);
+                return;
+            }
+        }
         const data = e.dataTransfer.getData("application/openflow-node");
         if (!data)
             return;
@@ -866,17 +1075,19 @@ export default function App() {
         const bounds = e.target.closest(".react-flow")?.getBoundingClientRect();
         const x = bounds ? e.clientX - bounds.left : e.clientX;
         const y = bounds ? e.clientY - bounds.top : e.clientY;
+        pushUndo();
         const newNode = {
             id: nodeId, type: "flowNode", position: { x, y },
             data: {
                 def, values: defaults,
                 onChange: (key, val) => updateNodeValue(nodeId, key, val),
                 onRun: () => runSingleNodeRef.current(nodeId),
-                onDelete: () => setNodes((nds) => nds.filter((n) => n.id !== nodeId)),
+                onDelete: () => { pushUndo(); setNodes((nds) => nds.filter((n) => n.id !== nodeId)); },
+                onPreview: (url, type) => setPreviewModal({ url, type }),
             },
         };
         setNodes((nds) => [...nds, newNode]);
-    }, [setNodes, updateNodeValue]);
+    }, [setNodes, updateNodeValue, pushUndo]);
     const onDragOver = useCallback((e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; }, []);
     const [activePanel, setActivePanel] = useState(null);
     const categories = Object.keys(grouped);
@@ -1041,7 +1252,7 @@ export default function App() {
     if (showLanding) {
         return _jsx(LandingPage, { onEnter: () => setShowLanding(false) });
     }
-    return (_jsxs("div", { style: { display: "flex", height: "100vh", background: "#f0f0f2", color: "#1a1a1a", fontFamily: "'SF Pro Display', 'Inter', -apple-system, 'Helvetica Neue', sans-serif" }, children: [_jsxs("nav", { style: { width: 56, background: "#0e0e10", display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 16, paddingBottom: 16, flexShrink: 0, zIndex: 20 }, children: [_jsx("div", { style: { width: 36, height: 36, borderRadius: "50%", background: "#c026d3", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, color: "#0e0e10", marginBottom: 24, cursor: "pointer", letterSpacing: "-0.5px" }, title: "OpenClaw", onClick: () => { setActivePanel(null); setCurrentView("dashboard"); }, children: "OF" }), _jsx("button", { title: "Dashboard", onClick: () => { setCurrentView("dashboard"); setActivePanel(null); }, style: { width: 38, height: 38, borderRadius: 10, border: "none", background: currentView === "dashboard" && !activePanel ? "#1e1e22" : "transparent", color: currentView === "dashboard" && !activePanel ? "#c026d3" : "#6b6b75", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }, dangerouslySetInnerHTML: { __html: SVG_ICONS.dashboard } }), categories.map((cat) => (_jsx("button", { title: CATEGORIES[cat] || cat, onClick: () => { setCurrentView("canvas"); setActivePanel(activePanel === cat ? null : cat); }, style: { width: 38, height: 38, borderRadius: 10, border: "none", background: activePanel === cat ? "#1e1e22" : "transparent", color: activePanel === cat ? "#c026d3" : "#6b6b75", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4, transition: "all 0.15s" }, onMouseOver: (e) => { if (activePanel !== cat)
+    return (_jsxs("div", { style: { display: "flex", height: "100vh", background: "#f0f0f2", color: "#1a1a1a", fontFamily: "'SF Pro Display', 'Inter', -apple-system, 'Helvetica Neue', sans-serif" }, children: [_jsxs("nav", { style: { width: 56, background: "#0e0e10", display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 16, paddingBottom: 16, flexShrink: 0, zIndex: 20 }, children: [_jsx("div", { style: { width: 36, height: 36, borderRadius: "50%", background: "#c026d3", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, color: "#0e0e10", marginBottom: 24, cursor: "pointer", letterSpacing: "-0.5px" }, title: "OpenClaw", onClick: () => { setActivePanel(null); setCurrentView("dashboard"); }, children: "OF" }), _jsx("button", { title: "Dashboard", onClick: () => { setCurrentView("dashboard"); setActivePanel(null); }, style: { width: 38, height: 38, borderRadius: 10, border: "none", background: currentView === "dashboard" && !activePanel ? "#1e1e22" : "transparent", color: currentView === "dashboard" && !activePanel ? "#c026d3" : "#6b6b75", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }, dangerouslySetInnerHTML: { __html: SVG_ICONS.dashboard } }), _jsx("button", { title: "Storyboard", onClick: () => { setCurrentView("storyboard"); setActivePanel(null); }, style: { width: 38, height: 38, borderRadius: 10, border: "none", background: currentView === "storyboard" ? "#1e1e22" : "transparent", color: currentView === "storyboard" ? "#c026d3" : "#6b6b75", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }, dangerouslySetInnerHTML: { __html: SVG_ICONS.scenes } }), categories.map((cat) => (_jsx("button", { title: CATEGORIES[cat] || cat, onClick: () => { setCurrentView("canvas"); setActivePanel(activePanel === cat ? null : cat); }, style: { width: 38, height: 38, borderRadius: 10, border: "none", background: activePanel === cat ? "#1e1e22" : "transparent", color: activePanel === cat ? "#c026d3" : "#6b6b75", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4, transition: "all 0.15s" }, onMouseOver: (e) => { if (activePanel !== cat)
                             e.currentTarget.style.color = "#9ca3af"; }, onMouseOut: (e) => { if (activePanel !== cat)
                             e.currentTarget.style.color = "#6b6b75"; }, dangerouslySetInnerHTML: { __html: SVG_ICONS[cat] || "" } }, cat))), _jsx("button", { title: "Model Manager", onClick: () => { setActivePanel(activePanel === "models" ? null : "models"); }, style: { width: 38, height: 38, borderRadius: 10, border: "none", background: activePanel === "models" ? "#1e1e22" : "transparent", color: activePanel === "models" ? "#c026d3" : "#6b6b75", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }, children: _jsxs("svg", { width: "20", height: "20", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", children: [_jsx("path", { d: "M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" }), _jsx("polyline", { points: "3.27 6.96 12 12.01 20.73 6.96" }), _jsx("line", { x1: "12", y1: "22.08", x2: "12", y2: "12" })] }) }), _jsx("button", { title: "Workflow Templates", onClick: () => { setActivePanel(activePanel === "workflows" ? null : "workflows"); }, style: { width: 38, height: 38, borderRadius: 10, border: "none", background: activePanel === "workflows" ? "#1e1e22" : "transparent", color: activePanel === "workflows" ? "#c026d3" : "#6b6b75", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }, children: _jsxs("svg", { width: "20", height: "20", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", children: [_jsx("rect", { x: "3", y: "11", width: "18", height: "10", rx: "2" }), _jsx("circle", { cx: "9", cy: "16", r: "1" }), _jsx("circle", { cx: "15", cy: "16", r: "1" }), _jsx("path", { d: "M8 11V7a4 4 0 0 1 8 0v4" }), _jsx("line", { x1: "12", y1: "4", x2: "12", y2: "2" }), _jsx("line", { x1: "10", y1: "2", x2: "14", y2: "2" })] }) }), _jsx("div", { style: { flex: 1 } }), _jsx("button", { title: "Asset Manager", onClick: () => { setActivePanel(activePanel === "assets" ? null : "assets"); }, style: { width: 38, height: 38, borderRadius: 10, border: "none", background: activePanel === "assets" ? "#1e1e22" : "transparent", color: activePanel === "assets" ? "#c026d3" : "#6b6b75", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }, dangerouslySetInnerHTML: { __html: SVG_ICONS.assets } }), _jsx("button", { title: "AI Chat", onClick: () => { setActivePanel(activePanel === "chat" ? null : "chat"); }, style: { width: 38, height: 38, borderRadius: 10, border: "none", background: activePanel === "chat" ? "#1e1e22" : "transparent", color: activePanel === "chat" ? "#c026d3" : "#6b6b75", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }, dangerouslySetInnerHTML: { __html: SVG_ICONS.chat } }), _jsx("button", { title: "Generation History", onClick: () => { setActivePanel(activePanel === "history" ? null : "history"); }, style: { width: 38, height: 38, borderRadius: 10, border: "none", background: activePanel === "history" ? "#1e1e22" : "transparent", color: activePanel === "history" ? "#c026d3" : "#6b6b75", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }, children: _jsxs("svg", { width: "20", height: "20", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", children: [_jsx("circle", { cx: "12", cy: "12", r: "10" }), _jsx("polyline", { points: "12 6 12 12 16 14" })] }) }), _jsx("button", { title: "Scene Builder", onClick: () => { setCurrentView("canvas"); setActivePanel(activePanel === "scenes" ? null : "scenes"); }, style: { width: 38, height: 38, borderRadius: 10, border: "none", background: activePanel === "scenes" ? "#1e1e22" : "transparent", color: activePanel === "scenes" ? "#c026d3" : "#6b6b75", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }, children: _jsxs("svg", { width: "20", height: "20", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", children: [_jsx("rect", { x: "2", y: "2", width: "20", height: "20", rx: "2" }), _jsx("line", { x1: "2", y1: "7", x2: "22", y2: "7" }), _jsx("line", { x1: "7", y1: "2", x2: "7", y2: "7" })] }) }), _jsx("button", { title: "Projects", onClick: () => { setActivePanel(activePanel === "projects" ? null : "projects"); loadProjects(); }, style: { width: 38, height: 38, borderRadius: 10, border: "none", background: activePanel === "projects" ? "#1e1e22" : "transparent", color: activePanel === "projects" ? "#c026d3" : "#6b6b75", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }, children: _jsx("svg", { width: "20", height: "20", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", children: _jsx("path", { d: "M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" }) }) }), _jsx("button", { title: "Settings", onClick: () => setActivePanel(activePanel === "settings" ? null : "settings"), style: { width: 38, height: 38, borderRadius: 10, border: "none", background: activePanel === "settings" ? "#1e1e22" : "transparent", color: activePanel === "settings" ? "#c026d3" : "#6b6b75", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }, dangerouslySetInnerHTML: { __html: SVG_ICONS.settings } }), _jsx("button", { title: "Run workflow", onClick: handleRun, disabled: isRunning || nodes.length === 0, style: { width: 38, height: 38, borderRadius: 10, border: "none", background: isRunning ? "#2a2a30" : "#c026d3", color: isRunning ? "#6b6b75" : "#0e0e10", cursor: isRunning ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center" }, dangerouslySetInnerHTML: { __html: SVG_ICONS.run } })] }), activePanel && (_jsx("aside", { style: { width: activePanel === "chat" ? 300 : activePanel === "models" ? 280 : 220, background: "#ffffff", borderRight: "1px solid #ebebee", overflowY: "auto", flexShrink: 0, zIndex: 15, boxShadow: "4px 0 16px rgba(0,0,0,0.03)", display: "flex", flexDirection: "column" }, children: activePanel === "models" ? (_jsx(ModelManagerPanel, { onCreateNode: (defId, modelKey) => {
                         const def = NODE_DEFS.find(d => d.id === defId);
@@ -1057,11 +1268,11 @@ export default function App() {
                             setActivePanel(null);
                             setCurrentView("canvas");
                         }
-                    } })) : activePanel === "settings" ? (_jsxs("div", { style: { padding: 20, overflow: "auto" }, children: [_jsx("div", { style: { fontSize: 13, fontWeight: 600, color: "#1a1a1a", marginBottom: 16 }, children: "Settings" }), _jsx("div", { style: { fontSize: 10, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 6 }, children: "API Keys" }), _jsx("div", { style: { fontSize: 10, color: "#6b7280", marginBottom: 4 }, children: "fal.ai (required)" }), _jsx("input", { type: "password", value: falApiKey, onChange: (e) => { setFalApiKey(e.target.value); localStorage.setItem("openflow_fal_key", e.target.value); }, onKeyDown: stopKeys, placeholder: "fal-xxxxxxxx", style: { width: "100%", background: "#f5f5f7", border: "none", borderRadius: 8, color: "#1a1a1a", fontSize: 12, padding: "8px 12px", outline: "none", boxSizing: "border-box", marginBottom: 6 } }), _jsx("div", { style: { fontSize: 10, color: "#6b7280", marginBottom: 4 }, children: "OpenAI (optional)" }), _jsx("input", { type: "password", value: localStorage.getItem("openflow_openai_key") || "", onChange: (e) => localStorage.setItem("openflow_openai_key", e.target.value), onKeyDown: stopKeys, placeholder: "sk-...", style: { width: "100%", background: "#f5f5f7", border: "none", borderRadius: 8, color: "#1a1a1a", fontSize: 12, padding: "8px 12px", outline: "none", boxSizing: "border-box", marginBottom: 6 } }), _jsx("div", { style: { fontSize: 10, color: "#6b7280", marginBottom: 4 }, children: "Replicate (optional)" }), _jsx("input", { type: "password", value: localStorage.getItem("openflow_replicate_key") || "", onChange: (e) => localStorage.setItem("openflow_replicate_key", e.target.value), onKeyDown: stopKeys, placeholder: "r8_...", style: { width: "100%", background: "#f5f5f7", border: "none", borderRadius: 8, color: "#1a1a1a", fontSize: 12, padding: "8px 12px", outline: "none", boxSizing: "border-box" } }), _jsxs("div", { style: { fontSize: 10, color: "#9ca3af", marginTop: 6, marginBottom: 16 }, children: ["Get keys at ", _jsx("a", { href: "https://fal.ai/dashboard/keys", target: "_blank", rel: "noopener", style: { color: "#1a1a1a", fontWeight: 600, textDecoration: "none" }, children: "fal.ai" })] }), _jsx("div", { style: { fontSize: 10, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 6 }, children: "Generation Defaults" }), _jsx("div", { style: { fontSize: 10, color: "#6b7280", marginBottom: 4 }, children: "Default image size" }), _jsxs("select", { value: localStorage.getItem("openflow_default_size") || "1024", onChange: (e) => localStorage.setItem("openflow_default_size", e.target.value), style: { width: "100%", background: "#f5f5f7", border: "none", borderRadius: 8, fontSize: 12, padding: "8px 12px", outline: "none", cursor: "pointer", marginBottom: 6, boxSizing: "border-box" }, children: [_jsx("option", { value: "512", children: "512\u00D7512" }), _jsx("option", { value: "768", children: "768\u00D7768" }), _jsx("option", { value: "1024", children: "1024\u00D71024" }), _jsx("option", { value: "1280", children: "1280\u00D71280" })] }), _jsx("div", { style: { fontSize: 10, color: "#6b7280", marginBottom: 4 }, children: "Default model" }), _jsxs("select", { value: localStorage.getItem("openflow_default_model") || "flux-2-pro", onChange: (e) => localStorage.setItem("openflow_default_model", e.target.value), style: { width: "100%", background: "#f5f5f7", border: "none", borderRadius: 8, fontSize: 12, padding: "8px 12px", outline: "none", cursor: "pointer", marginBottom: 6, boxSizing: "border-box" }, children: [_jsx("option", { value: "flux-fast", children: "flux-fast (Fast)" }), _jsx("option", { value: "flux-2-pro", children: "flux-2-pro (Balanced)" }), _jsx("option", { value: "flux-pro-1.1-ultra", children: "flux-pro-1.1-ultra (Quality)" })] }), _jsx("div", { style: { fontSize: 10, color: "#6b7280", marginBottom: 4 }, children: "Quality preset" }), _jsx("div", { style: { display: "flex", gap: 4, marginBottom: 16 }, children: ["fast", "balanced", "quality"].map(p => (_jsx("button", { onClick: () => localStorage.setItem("openflow_quality_preset", p), style: { flex: 1, padding: "6px", background: (localStorage.getItem("openflow_quality_preset") || "balanced") === p ? "#c026d3" : "#f5f5f7", color: (localStorage.getItem("openflow_quality_preset") || "balanced") === p ? "#fff" : "#6b7280", border: "none", borderRadius: 6, fontSize: 10, fontWeight: 600, cursor: "pointer", textTransform: "capitalize" }, children: p }, p))) }), _jsx("div", { style: { fontSize: 10, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 6 }, children: "Appearance" }), _jsx("button", { onClick: () => setDarkMode(!darkMode), style: { width: "100%", padding: "8px 12px", background: "#f5f5f7", border: "1px solid #ebebee", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: "pointer", color: "#1a1a1a", textAlign: "left", marginBottom: 12 }, children: darkMode ? "🌙 Dark Mode ON" : "☀️ Light Mode" }), _jsx("div", { style: { fontSize: 10, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 6 }, children: "Workflow" }), _jsx("button", { onClick: exportWorkflow, style: { width: "100%", padding: "8px 12px", background: "#f5f5f7", border: "1px solid #ebebee", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: "pointer", color: "#1a1a1a", textAlign: "left", marginBottom: 6 }, children: "\uD83D\uDCE4 Export Workflow JSON" }), _jsx("div", { style: { fontSize: 10, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.8px", marginTop: 12, marginBottom: 6 }, children: "Training Data" }), _jsxs("div", { style: { fontSize: 11, color: "#6b7280", marginBottom: 6 }, children: [getTrainingDataCount(), " records collected"] }), _jsx("button", { onClick: () => { exportTrainingData(); addToast("Training data exported!", "success"); }, style: { width: "100%", padding: "8px 12px", background: "#f5f5f7", border: "1px solid #ebebee", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: "pointer", color: "#1a1a1a", textAlign: "left" }, children: "\uD83D\uDCCA Export Training Data (JSONL)" }), _jsx("div", { style: { fontSize: 10, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.8px", marginTop: 16, marginBottom: 6 }, children: "About" }), _jsxs("div", { style: { fontSize: 11, color: "#6b7280", lineHeight: 1.8 }, children: ["OpenFlow v4.0 \u2014 Sprint 4", _jsx("br", {}), _jsx("a", { href: "https://github.com/nikolateslasagent/openflow", target: "_blank", rel: "noopener", style: { color: "#c026d3", textDecoration: "none" }, children: "GitHub" }), " \u00B7 ", _jsx("a", { href: "https://openflow-docs.vercel.app", target: "_blank", rel: "noopener", style: { color: "#c026d3", textDecoration: "none" }, children: "Docs" })] }), _jsxs("div", { style: { fontSize: 10, color: "#c4c4c8", marginTop: 16 }, children: [nodes.length, " nodes \u00B7 ", edges.length, " connections"] }), _jsx("div", { style: { fontSize: 9, color: "#d1d5db", marginTop: 4 }, children: "Shortcuts: Space=Run, Del=Delete, \u2318S=Save, \u2318D=Duplicate" })] })) : (_jsxs("div", { style: { padding: "16px 0" }, children: [_jsx("div", { style: { padding: "0 16px 10px", fontSize: 13, fontWeight: 600, color: "#1a1a1a" }, children: CATEGORIES[activePanel] || activePanel }), (grouped[activePanel] || []).map((def) => {
+                    } })) : activePanel === "settings" ? (_jsxs("div", { style: { padding: 20, overflow: "auto" }, children: [_jsx("div", { style: { fontSize: 13, fontWeight: 600, color: "#1a1a1a", marginBottom: 16 }, children: "Settings" }), _jsx("div", { style: { fontSize: 10, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 6 }, children: "API Keys" }), _jsx("div", { style: { fontSize: 10, color: "#6b7280", marginBottom: 4 }, children: "fal.ai (required)" }), _jsx("input", { type: "password", value: falApiKey, onChange: (e) => { setFalApiKey(e.target.value); localStorage.setItem("openflow_fal_key", e.target.value); }, onKeyDown: stopKeys, placeholder: "fal-xxxxxxxx", style: { width: "100%", background: "#f5f5f7", border: "none", borderRadius: 8, color: "#1a1a1a", fontSize: 12, padding: "8px 12px", outline: "none", boxSizing: "border-box", marginBottom: 6 } }), _jsx("div", { style: { fontSize: 10, color: "#6b7280", marginBottom: 4 }, children: "OpenAI (optional)" }), _jsx("input", { type: "password", value: localStorage.getItem("openflow_openai_key") || "", onChange: (e) => localStorage.setItem("openflow_openai_key", e.target.value), onKeyDown: stopKeys, placeholder: "sk-...", style: { width: "100%", background: "#f5f5f7", border: "none", borderRadius: 8, color: "#1a1a1a", fontSize: 12, padding: "8px 12px", outline: "none", boxSizing: "border-box", marginBottom: 6 } }), _jsx("div", { style: { fontSize: 10, color: "#6b7280", marginBottom: 4 }, children: "Replicate (optional)" }), _jsx("input", { type: "password", value: localStorage.getItem("openflow_replicate_key") || "", onChange: (e) => localStorage.setItem("openflow_replicate_key", e.target.value), onKeyDown: stopKeys, placeholder: "r8_...", style: { width: "100%", background: "#f5f5f7", border: "none", borderRadius: 8, color: "#1a1a1a", fontSize: 12, padding: "8px 12px", outline: "none", boxSizing: "border-box" } }), _jsxs("div", { style: { fontSize: 10, color: "#9ca3af", marginTop: 6, marginBottom: 16 }, children: ["Get keys at ", _jsx("a", { href: "https://fal.ai/dashboard/keys", target: "_blank", rel: "noopener", style: { color: "#1a1a1a", fontWeight: 600, textDecoration: "none" }, children: "fal.ai" })] }), _jsx("div", { style: { fontSize: 10, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 6 }, children: "Generation Defaults" }), _jsx("div", { style: { fontSize: 10, color: "#6b7280", marginBottom: 4 }, children: "Default image size" }), _jsxs("select", { value: localStorage.getItem("openflow_default_size") || "1024", onChange: (e) => localStorage.setItem("openflow_default_size", e.target.value), style: { width: "100%", background: "#f5f5f7", border: "none", borderRadius: 8, fontSize: 12, padding: "8px 12px", outline: "none", cursor: "pointer", marginBottom: 6, boxSizing: "border-box" }, children: [_jsx("option", { value: "512", children: "512\u00D7512" }), _jsx("option", { value: "768", children: "768\u00D7768" }), _jsx("option", { value: "1024", children: "1024\u00D71024" }), _jsx("option", { value: "1280", children: "1280\u00D71280" })] }), _jsx("div", { style: { fontSize: 10, color: "#6b7280", marginBottom: 4 }, children: "Default model" }), _jsxs("select", { value: localStorage.getItem("openflow_default_model") || "flux-2-pro", onChange: (e) => localStorage.setItem("openflow_default_model", e.target.value), style: { width: "100%", background: "#f5f5f7", border: "none", borderRadius: 8, fontSize: 12, padding: "8px 12px", outline: "none", cursor: "pointer", marginBottom: 6, boxSizing: "border-box" }, children: [_jsx("option", { value: "flux-fast", children: "flux-fast (Fast)" }), _jsx("option", { value: "flux-2-pro", children: "flux-2-pro (Balanced)" }), _jsx("option", { value: "flux-pro-1.1-ultra", children: "flux-pro-1.1-ultra (Quality)" })] }), _jsx("div", { style: { fontSize: 10, color: "#6b7280", marginBottom: 4 }, children: "Quality preset" }), _jsx("div", { style: { display: "flex", gap: 4, marginBottom: 16 }, children: ["fast", "balanced", "quality"].map(p => (_jsx("button", { onClick: () => localStorage.setItem("openflow_quality_preset", p), style: { flex: 1, padding: "6px", background: (localStorage.getItem("openflow_quality_preset") || "balanced") === p ? "#c026d3" : "#f5f5f7", color: (localStorage.getItem("openflow_quality_preset") || "balanced") === p ? "#fff" : "#6b7280", border: "none", borderRadius: 6, fontSize: 10, fontWeight: 600, cursor: "pointer", textTransform: "capitalize" }, children: p }, p))) }), _jsx("div", { style: { fontSize: 10, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 6 }, children: "Appearance" }), _jsx("button", { onClick: () => setDarkMode(!darkMode), style: { width: "100%", padding: "8px 12px", background: "#f5f5f7", border: "1px solid #ebebee", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: "pointer", color: "#1a1a1a", textAlign: "left", marginBottom: 12 }, children: darkMode ? "🌙 Dark Mode ON" : "☀️ Light Mode" }), _jsx("div", { style: { fontSize: 10, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 6 }, children: "Workflow" }), _jsx("button", { onClick: exportWorkflow, style: { width: "100%", padding: "8px 12px", background: "#f5f5f7", border: "1px solid #ebebee", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: "pointer", color: "#1a1a1a", textAlign: "left", marginBottom: 6 }, children: "\uD83D\uDCE4 Export Workflow JSON" }), _jsx("div", { style: { fontSize: 10, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.8px", marginTop: 12, marginBottom: 6 }, children: "Training Data" }), _jsxs("div", { style: { fontSize: 11, color: "#6b7280", marginBottom: 6 }, children: [getTrainingDataCount(), " records collected"] }), _jsx("button", { onClick: () => { exportTrainingData(); addToast("Training data exported!", "success"); }, style: { width: "100%", padding: "8px 12px", background: "#f5f5f7", border: "1px solid #ebebee", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: "pointer", color: "#1a1a1a", textAlign: "left" }, children: "\uD83D\uDCCA Export Training Data (JSONL)" }), _jsx("div", { style: { fontSize: 10, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.8px", marginTop: 16, marginBottom: 6 }, children: "About" }), _jsxs("div", { style: { fontSize: 11, color: "#6b7280", lineHeight: 1.8 }, children: ["OpenFlow v5.0 \u2014 Sprint 5", _jsx("br", {}), _jsx("a", { href: "https://github.com/nikolateslasagent/openflow", target: "_blank", rel: "noopener", style: { color: "#c026d3", textDecoration: "none" }, children: "GitHub" }), " \u00B7 ", _jsx("a", { href: "https://openflow-docs.vercel.app", target: "_blank", rel: "noopener", style: { color: "#c026d3", textDecoration: "none" }, children: "Docs" })] }), _jsxs("div", { style: { fontSize: 10, color: "#c4c4c8", marginTop: 16 }, children: [nodes.length, " nodes \u00B7 ", edges.length, " connections"] }), _jsx("div", { style: { fontSize: 9, color: "#d1d5db", marginTop: 4 }, children: "Shortcuts: Space=Run, Del=Delete, \u2318S=Save, \u2318D=Duplicate" })] })) : (_jsxs("div", { style: { padding: "16px 0" }, children: [_jsx("div", { style: { padding: "0 16px 10px", fontSize: 13, fontWeight: 600, color: "#1a1a1a" }, children: CATEGORIES[activePanel] || activePanel }), (grouped[activePanel] || []).map((def) => {
                             const modelInput = def.inputs.find((inp) => inp.name === "model");
                             const models = modelInput?.options || [];
                             return (_jsxs("div", { children: [_jsxs("div", { draggable: true, onDragStart: (e) => onDragStart(e, def), onClick: () => { addNodeWithHandler(def); setActivePanel(null); setCurrentView("canvas"); }, style: { display: "flex", alignItems: "center", gap: 10, padding: "8px 16px", cursor: "grab", transition: "background 0.12s" }, onMouseOver: (e) => { e.currentTarget.style.background = "#f5f5f7"; }, onMouseOut: (e) => { e.currentTarget.style.background = "transparent"; }, children: [_jsx("span", { style: { color: "#6b7280", display: "flex" }, dangerouslySetInnerHTML: { __html: NODE_ICONS[def.id] || "" } }), _jsx("div", { style: { fontSize: 13, fontWeight: 500, color: "#1a1a1a" }, children: def.name })] }), models.length > 0 && (_jsx("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, padding: "4px 12px 12px" }, children: models.map((m) => (_jsx("button", { onClick: () => { addNodeWithHandler(def, { model: m }); setActivePanel(null); setCurrentView("canvas"); }, style: { background: "#f5f5f7", border: "1px solid #ebebee", borderRadius: 8, padding: "8px 6px", cursor: "pointer", fontSize: 10, fontWeight: 500, color: "#1a1a1a", textAlign: "center", transition: "all 0.12s", lineHeight: 1.3 }, onMouseOver: (e) => { e.currentTarget.style.background = "#e8e8eb"; e.currentTarget.style.borderColor = "#d1d5db"; }, onMouseOut: (e) => { e.currentTarget.style.background = "#f5f5f7"; e.currentTarget.style.borderColor = "#ebebee"; }, children: m }, m))) }))] }, def.id));
-                        })] })) })), currentView === "dashboard" ? (_jsx(Dashboard, { onNewProject: () => { setNodes([]); setEdges([]); setCurrentView("canvas"); }, onOpenCanvas: () => setCurrentView("canvas"), onLoadTemplate: loadTemplate, assets: assets })) : (_jsxs("div", { style: { flex: 1, display: "flex", flexDirection: "column" }, onDrop: onDrop, onDragOver: onDragOver, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", background: "#0e0e10", borderBottom: "1px solid #1e1e22", flexShrink: 0 }, children: [["dashboard", "canvas", "assets"].map((view) => (_jsx("button", { onClick: () => setCurrentView(view), style: {
+                        })] })) })), currentView === "dashboard" ? (_jsx(Dashboard, { onNewProject: () => { setNodes([]); setEdges([]); setCurrentView("canvas"); }, onOpenCanvas: () => setCurrentView("canvas"), onLoadTemplate: loadTemplate, assets: assets })) : (_jsxs("div", { style: { flex: 1, display: "flex", flexDirection: "column" }, onDrop: onDrop, onDragOver: onDragOver, children: [executionProgress && (_jsx("div", { style: { background: "#1a1a1f", borderBottom: "1px solid #2a2a30", padding: "8px 16px", display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }, children: _jsxs("div", { style: { flex: 1 }, children: [_jsxs("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }, children: [_jsxs("span", { style: { fontSize: 12, fontWeight: 600, color: "#f59e0b" }, children: ["\u23F3 Running ", executionProgress.current, "/", executionProgress.total, " nodes..."] }), _jsx("button", { onClick: () => { cancelRef.current = true; }, style: { padding: "4px 12px", background: "#ef4444", color: "#fff", border: "none", borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: "pointer" }, children: "Cancel" })] }), _jsx("div", { style: { width: "100%", height: 4, background: "#2a2a30", borderRadius: 2, overflow: "hidden" }, children: _jsx("div", { style: { width: `${(executionProgress.current / executionProgress.total) * 100}%`, height: "100%", background: "linear-gradient(90deg, #c026d3, #f59e0b)", borderRadius: 2, transition: "width 0.3s" } }) })] }) })), _jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", background: "#0e0e10", borderBottom: "1px solid #1e1e22", flexShrink: 0 }, children: [["dashboard", "canvas", "storyboard", "assets"].map((view) => (_jsx("button", { onClick: () => setCurrentView(view), style: {
                                     padding: "8px 16px", borderRadius: 8, border: "none",
                                     background: currentView === view ? "#c026d3" : "#141416",
                                     color: currentView === view ? "#fff" : "#9ca3af",
@@ -1083,7 +1294,7 @@ export default function App() {
                                                 }
                                                 addToast(`Ran ${selected.length} nodes`, "success");
                                             })();
-                                        }, style: { padding: "8px 14px", borderRadius: 8, border: "1px solid #2a2a30", background: "#141416", color: "#22c55e", fontSize: 12, fontWeight: 600, cursor: "pointer" }, children: "\u25B6 Run Selected" }), _jsx("button", { onClick: () => { setNodes(nds => nds.filter(n => !n.selected)); addToast("Deleted selected", "success"); }, style: { padding: "8px 14px", borderRadius: 8, border: "1px solid #2a2a30", background: "#141416", color: "#ef4444", fontSize: 12, fontWeight: 600, cursor: "pointer" }, children: "\uD83D\uDDD1 Delete" })] })), _jsx("button", { onClick: exportWorkflow, title: "Export workflow", style: { display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, border: "1px solid #2a2a30", background: "#141416", color: "#9ca3af", fontSize: 12, fontWeight: 600, cursor: "pointer" }, children: "\uD83D\uDCE4 Export" }), _jsx("button", { onClick: handleRun, disabled: isRunning || nodes.length === 0, title: "Run All (topological order)", style: { display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 8, border: "none", background: isRunning ? "#2a2a30" : "#c026d3", color: isRunning ? "#6b6b75" : "#fff", fontSize: 12, fontWeight: 700, cursor: isRunning ? "not-allowed" : "pointer" }, children: isRunning ? "⏳ Running..." : "▶ Run All" })] }), currentView === "assets" ? (_jsxs("div", { style: { flex: 1, overflow: "auto", padding: 32 }, children: [_jsx("h2", { style: { fontSize: 20, fontWeight: 600, color: "#1a1a1a", marginBottom: 20 }, children: "All Assets" }), assets.length === 0 && _jsx("div", { style: { fontSize: 14, color: "#9ca3af", textAlign: "center", padding: 60 }, children: "No assets yet. Generate some images or videos!" }), _jsx("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 16 }, children: assets.map((asset, i) => (_jsxs("div", { style: { borderRadius: 12, overflow: "hidden", border: "1px solid #e8e8eb", background: "#fff" }, children: [asset.type === "video" ? (_jsx("video", { src: asset.url, style: { width: "100%", height: 160, objectFit: "cover" }, controls: true, muted: true })) : (_jsx("img", { src: asset.url, alt: "", style: { width: "100%", height: 160, objectFit: "cover" } })), _jsxs("div", { style: { padding: "10px 12px" }, children: [_jsx("div", { style: { fontSize: 11, fontWeight: 600, color: "#1a1a1a" }, children: asset.model }), _jsx("div", { style: { fontSize: 10, color: "#9ca3af", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: asset.prompt }), _jsxs("div", { style: { display: "flex", gap: 6, marginTop: 8 }, children: [_jsx("a", { href: asset.url, download: true, target: "_blank", rel: "noopener", style: { padding: "4px 10px", background: "#c026d3", color: "#fff", borderRadius: 6, fontSize: 10, fontWeight: 600, textDecoration: "none" }, children: "Download" }), _jsx("span", { style: { padding: "4px 8px", background: "#f5f5f7", borderRadius: 6, fontSize: 10, color: "#6b7280" }, children: asset.type })] })] })] }, i))) })] })) : (_jsx("div", { style: { flex: 1 }, children: _jsxs(ReactFlow, { nodes: nodes, edges: edges, onNodesChange: onNodesChange, onEdgesChange: onEdgesChange, onConnect: onConnect, nodeTypes: nodeTypes, fitView: true, style: { background: "#f0f0f2" }, defaultEdgeOptions: { animated: isRunning, style: { stroke: "#d1d5db", strokeWidth: 1.5 }, type: "smoothstep" }, children: [_jsx(Background, { variant: BackgroundVariant.Dots, color: "#c0c0c6", gap: 28, size: 1.2 }), _jsx(Controls, { style: { background: "#ffffff", border: "1px solid #e8e8eb", borderRadius: 10, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" } }), _jsx(MiniMap, { style: { background: "#ffffff", borderRadius: 10, border: "1px solid #e8e8eb", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }, nodeColor: "#d1d5db", maskColor: "rgba(240,240,242,0.8)" })] }) }))] })), _jsx(ToastContainer, {}), _jsx("style", { children: `
+                                        }, style: { padding: "8px 14px", borderRadius: 8, border: "1px solid #2a2a30", background: "#141416", color: "#22c55e", fontSize: 12, fontWeight: 600, cursor: "pointer" }, children: "\u25B6 Run Selected" }), _jsx("button", { onClick: () => { setNodes(nds => nds.filter(n => !n.selected)); addToast("Deleted selected", "success"); }, style: { padding: "8px 14px", borderRadius: 8, border: "1px solid #2a2a30", background: "#141416", color: "#ef4444", fontSize: 12, fontWeight: 600, cursor: "pointer" }, children: "\uD83D\uDDD1 Delete" })] })), _jsx("button", { onClick: () => undo(), disabled: undoStack.length === 0, title: "Undo (Ctrl+Z)", style: { padding: "8px 10px", borderRadius: 8, border: "1px solid #2a2a30", background: "#141416", color: undoStack.length > 0 ? "#9ca3af" : "#4a4a50", fontSize: 12, cursor: undoStack.length > 0 ? "pointer" : "not-allowed" }, children: "\u21A9" }), _jsx("button", { onClick: () => redo(), disabled: redoStack.length === 0, title: "Redo (Ctrl+Shift+Z)", style: { padding: "8px 10px", borderRadius: 8, border: "1px solid #2a2a30", background: "#141416", color: redoStack.length > 0 ? "#9ca3af" : "#4a4a50", fontSize: 12, cursor: redoStack.length > 0 ? "pointer" : "not-allowed" }, children: "\u21AA" }), _jsx("button", { onClick: exportWorkflow, title: "Export workflow", style: { display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, border: "1px solid #2a2a30", background: "#141416", color: "#9ca3af", fontSize: 12, fontWeight: 600, cursor: "pointer" }, children: "\uD83D\uDCE4 Export" }), _jsx("button", { onClick: handleRun, disabled: isRunning || nodes.length === 0, title: "Run All (topological order)", style: { display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 8, border: "none", background: isRunning ? "#2a2a30" : "#c026d3", color: isRunning ? "#6b6b75" : "#fff", fontSize: 12, fontWeight: 700, cursor: isRunning ? "not-allowed" : "pointer" }, children: isRunning ? "⏳ Running..." : "▶ Run All" })] }), currentView === "storyboard" ? (_jsx(StoryboardView, { falApiKey: falApiKey, onSaveAsset: (asset) => { setAssets(prev => [asset, ...prev]); } })) : currentView === "assets" ? (_jsxs("div", { style: { flex: 1, overflow: "auto", padding: 32 }, children: [_jsx("h2", { style: { fontSize: 20, fontWeight: 600, color: "#1a1a1a", marginBottom: 20 }, children: "All Assets" }), assets.length === 0 && _jsx("div", { style: { fontSize: 14, color: "#9ca3af", textAlign: "center", padding: 60 }, children: "No assets yet. Generate some images or videos!" }), _jsx("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 16 }, children: assets.map((asset, i) => (_jsxs("div", { style: { borderRadius: 12, overflow: "hidden", border: "1px solid #e8e8eb", background: "#fff" }, children: [asset.type === "video" ? (_jsx("video", { src: asset.url, style: { width: "100%", height: 160, objectFit: "cover" }, controls: true, muted: true })) : (_jsx("img", { src: asset.url, alt: "", style: { width: "100%", height: 160, objectFit: "cover" } })), _jsxs("div", { style: { padding: "10px 12px" }, children: [_jsx("div", { style: { fontSize: 11, fontWeight: 600, color: "#1a1a1a" }, children: asset.model }), _jsx("div", { style: { fontSize: 10, color: "#9ca3af", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }, children: asset.prompt }), _jsxs("div", { style: { display: "flex", gap: 6, marginTop: 8 }, children: [_jsx("a", { href: asset.url, download: true, target: "_blank", rel: "noopener", style: { padding: "4px 10px", background: "#c026d3", color: "#fff", borderRadius: 6, fontSize: 10, fontWeight: 600, textDecoration: "none" }, children: "Download" }), _jsx("span", { style: { padding: "4px 8px", background: "#f5f5f7", borderRadius: 6, fontSize: 10, color: "#6b7280" }, children: asset.type })] })] })] }, i))) })] })) : (_jsx("div", { style: { flex: 1 }, children: _jsxs(ReactFlow, { nodes: nodes, edges: edges, onNodesChange: onNodesChange, onEdgesChange: onEdgesChange, onConnect: onConnect, nodeTypes: nodeTypes, fitView: true, style: { background: "#f0f0f2" }, defaultEdgeOptions: { animated: isRunning, style: { stroke: "#d1d5db", strokeWidth: 1.5 }, type: "smoothstep" }, children: [_jsx(Background, { variant: BackgroundVariant.Dots, color: "#c0c0c6", gap: 28, size: 1.2 }), _jsx(Controls, { style: { background: "#ffffff", border: "1px solid #e8e8eb", borderRadius: 10, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" } }), _jsx(MiniMap, { style: { background: "#ffffff", borderRadius: 10, border: "1px solid #e8e8eb", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }, nodeColor: "#d1d5db", maskColor: "rgba(240,240,242,0.8)" })] }) }))] })), previewModal && (_jsx("div", { onClick: () => setPreviewModal(null), style: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 40, cursor: "pointer" }, children: _jsxs("div", { onClick: (e) => e.stopPropagation(), style: { maxWidth: "90vw", maxHeight: "90vh", position: "relative" }, children: [_jsx("button", { onClick: () => setPreviewModal(null), style: { position: "absolute", top: -12, right: -12, width: 32, height: 32, borderRadius: "50%", background: "#fff", border: "none", fontSize: 16, cursor: "pointer", zIndex: 1, boxShadow: "0 2px 8px rgba(0,0,0,0.3)" }, children: "\u2715" }), previewModal.type === "video" ? (_jsx("video", { src: previewModal.url, controls: true, autoPlay: true, style: { maxWidth: "90vw", maxHeight: "85vh", borderRadius: 12 } })) : (_jsx("img", { src: previewModal.url, alt: "preview", style: { maxWidth: "90vw", maxHeight: "85vh", borderRadius: 12, objectFit: "contain" } })), _jsx("div", { style: { textAlign: "center", marginTop: 12 }, children: _jsx("a", { href: previewModal.url, download: true, target: "_blank", rel: "noopener", style: { padding: "8px 20px", background: "#c026d3", color: "#fff", borderRadius: 8, fontSize: 13, fontWeight: 600, textDecoration: "none" }, children: "Download" }) })] }) })), _jsx(ToastContainer, {}), _jsx("style", { children: `
         @keyframes slideIn { from { transform: translateX(100px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         .react-flow__edge.animated path { stroke-dasharray: 5; animation: flowDash 0.5s linear infinite; }
         @keyframes flowDash { to { stroke-dashoffset: -10; } }

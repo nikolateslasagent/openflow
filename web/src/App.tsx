@@ -26,6 +26,10 @@ import { ModelManagerPanel } from "./ModelManager";
 import { WorkflowTemplatesPanel } from "./WorkflowTemplates";
 import { saveTrainingRecord, getTrainingDataCount, exportTrainingData, getTrainingRecords, clearTrainingData } from "./TrainingData";
 import { useToast } from "./Toast";
+import { GalleryView } from "./GalleryView";
+import { TutorialOverlay, shouldShowTutorial } from "./TutorialOverlay";
+import { encodeWorkflowToUrl, decodeWorkflowFromHash } from "./WorkflowSharing";
+import { StoryboardView } from "./Storyboard";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -1109,7 +1113,7 @@ function HistoryPanel({ onRerun }: { onRerun: (record: { model: string; prompt: 
 
 export default function App() {
   const [showLanding, setShowLanding] = useState(true);
-  const [currentView, setCurrentView] = useState<"dashboard" | "canvas" | "assets">("dashboard");
+  const [currentView, setCurrentView] = useState<"dashboard" | "canvas" | "assets" | "storyboard">("dashboard");
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [isRunning, setIsRunning] = useState(false);
@@ -1688,6 +1692,11 @@ export default function App() {
           style={{ width: 38, height: 38, borderRadius: 10, border: "none", background: currentView === "dashboard" && !activePanel ? "#1e1e22" : "transparent", color: currentView === "dashboard" && !activePanel ? "#c026d3" : "#6b6b75", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }}
           dangerouslySetInnerHTML={{ __html: SVG_ICONS.dashboard }} />
 
+        {/* Storyboard */}
+        <button title="Storyboard" onClick={() => { setCurrentView("storyboard"); setActivePanel(null); }}
+          style={{ width: 38, height: 38, borderRadius: 10, border: "none", background: currentView === "storyboard" ? "#1e1e22" : "transparent", color: currentView === "storyboard" ? "#c026d3" : "#6b6b75", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }}
+          dangerouslySetInnerHTML={{ __html: SVG_ICONS.scenes }} />
+
         {/* Category icons */}
         {categories.map((cat) => (
           <button key={cat} title={CATEGORIES[cat] || cat}
@@ -1945,7 +1954,7 @@ export default function App() {
           {/* Top bar with view tabs */}
           <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", background: "#0e0e10", borderBottom: "1px solid #1e1e22", flexShrink: 0 }}>
             {/* View tabs */}
-            {(["dashboard", "canvas", "assets"] as const).map((view) => (
+            {(["dashboard", "canvas", "storyboard", "assets"] as const).map((view) => (
               <button key={view} onClick={() => setCurrentView(view)}
                 style={{
                   padding: "8px 16px", borderRadius: 8, border: "none",
@@ -2000,7 +2009,12 @@ export default function App() {
             </button>
           </div>
 
-          {currentView === "assets" ? (
+          {currentView === "storyboard" ? (
+            <StoryboardView
+              falApiKey={falApiKey}
+              onSaveAsset={(asset) => { setAssets(prev => [asset, ...prev]); }}
+            />
+          ) : currentView === "assets" ? (
             <div style={{ flex: 1, overflow: "auto", padding: 32 }}>
               <h2 style={{ fontSize: 20, fontWeight: 600, color: "#1a1a1a", marginBottom: 20 }}>All Assets</h2>
               {assets.length === 0 && <div style={{ fontSize: 14, color: "#9ca3af", textAlign: "center", padding: 60 }}>No assets yet. Generate some images or videos!</div>}

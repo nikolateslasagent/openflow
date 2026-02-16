@@ -47,6 +47,10 @@ import { KeyboardShortcutsModal } from "./KeyboardShortcuts";
 import { parseAgentParams, APIDocsPanel } from "./AgentAPI";
 import { AnalyticsDashboard, UsageQuotasSection, ModelComparisonPanel, WorkflowStatsInline, trackWorkflowRun, incrementDailyUsage } from "./Analytics";
 import { DashboardCardSkeleton as _DashboardCardSkeleton, AssetGridSkeleton as _AssetGridSkeleton, GenerationSpinner as _GenerationSpinner } from "./SkeletonLoaders";
+import { ThemeSelector } from "./ThemeEngine";
+import { DataManagementSection } from "./DataManagement";
+import { PluginsSection } from "./PluginSystem";
+import { useWorkspaceTabs, WorkspaceTabBar } from "./WorkspaceTabs";
 // Re-export for external use
 export { _DashboardCardSkeleton as DashboardCardSkeleton, _AssetGridSkeleton as AssetGridSkeleton, _GenerationSpinner as GenerationSpinner };
 
@@ -1381,6 +1385,7 @@ export default function App() {
   const generationQueue = useGenerationQueue();
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showNotifPanel, setShowNotifPanel] = useState(false);
+  const wsTabs = useWorkspaceTabs();
 
   // suppress unused warnings
   void showGallery; void showTutorial; void contextMenu; void editingComment;
@@ -2492,6 +2497,8 @@ export default function App() {
               </div>
 
               <div style={{ fontSize: 10, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 6 }}>Appearance</div>
+              <ThemeSelector />
+              <div style={{ marginTop: 8 }} />
               <button onClick={() => setDarkMode(!darkMode)} style={{ width: "100%", padding: "8px 12px", background: "#f5f5f7", border: "1px solid #ebebee", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: "pointer", color: "#1a1a1a", textAlign: "left", marginBottom: 12 }}>
                 {darkMode ? "🌙 Dark Mode ON" : "☀️ Light Mode"}
               </button>
@@ -2517,9 +2524,12 @@ export default function App() {
 
               <UsageQuotasSection />
 
+              <DataManagementSection onToast={addToast} />
+              <PluginsSection />
+
               <div style={{ fontSize: 10, fontWeight: 600, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.8px", marginTop: 16, marginBottom: 6 }}>About</div>
               <div style={{ fontSize: 11, color: "#6b7280", lineHeight: 1.8 }}>
-                OpenFlow v14.0 — Sprint 14<br />
+                OpenFlow v1.0 — Open Source<br />
                 <a href="https://github.com/nikolateslasagent/openflow" target="_blank" rel="noopener" style={{ color: "#c026d3", textDecoration: "none" }}>GitHub</a> · <a href="https://openflow-docs.vercel.app" target="_blank" rel="noopener" style={{ color: "#c026d3", textDecoration: "none" }}>Docs</a>
               </div>
 
@@ -2572,6 +2582,15 @@ export default function App() {
         />
       ) : (
         <div style={{ flex: 1, display: "flex", flexDirection: "column" }} onDrop={onDrop} onDragOver={onDragOver}>
+          {/* Workspace tabs */}
+          <WorkspaceTabBar
+            workspaces={wsTabs.workspaces}
+            activeIndex={wsTabs.activeIndex}
+            onSwitch={(i) => { wsTabs.switchWorkspace(i, nodes, edges); const ws = wsTabs.workspaces[i]; if (ws) { setNodes(ws.nodes); setEdges(ws.edges); } }}
+            onAdd={() => { wsTabs.saveCurrentState(nodes, edges); wsTabs.addWorkspace(); setNodes([]); setEdges([]); }}
+            onClose={(i) => wsTabs.closeWorkspace(i)}
+            onRename={(i, name) => wsTabs.renameWorkspace(i, name)}
+          />
           {/* Execution progress bar */}
           {executionProgress && (
             <div style={{ background: "#1a1a1f", borderBottom: "1px solid #2a2a30", padding: "8px 16px", display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
@@ -2942,6 +2961,10 @@ export default function App() {
         onReorder={generationQueue.reorder}
         onClearCompleted={generationQueue.clearCompleted}
       />
+      {/* Version badge */}
+      <div style={{ position: "fixed", bottom: 12, left: 68, zIndex: 10, fontSize: 10, fontWeight: 600, color: "var(--of-muted-text, #9ca3af)", background: "var(--of-card-bg, #ffffff)", padding: "4px 10px", borderRadius: 50, border: "1px solid var(--of-card-border, #e8e8eb)", opacity: 0.7, pointerEvents: "none" }}>
+        OpenFlow v1.0 — Open Source
+      </div>
       <ToastContainer />
       <style>{`
         @keyframes slideIn { from { transform: translateX(100px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }

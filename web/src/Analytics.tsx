@@ -2,7 +2,7 @@
  * Analytics Dashboard, Cost Estimator, Usage Quotas, Model Comparison
  * Sprint 13
  */
-import React, { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { getTrainingRecords } from "./TrainingData";
 
 // ---------------------------------------------------------------------------
@@ -170,7 +170,7 @@ function PieChart({ data, size = 100 }: { data: { label: string; value: number; 
 // ---------------------------------------------------------------------------
 export function AnalyticsDashboard({ assets }: { assets: Asset[] }) {
   const records: TrainingRecord[] = useMemo(() => {
-    try { return getTrainingRecords() as TrainingRecord[]; } catch { return []; }
+    try { return getTrainingRecords() as unknown as TrainingRecord[]; } catch { return []; }
   }, []);
 
   const allItems = useMemo(() => {
@@ -230,7 +230,7 @@ export function AnalyticsDashboard({ assets }: { assets: Asset[] }) {
   }, [allItems]);
 
   // Budget alert
-  const [budgetThreshold, setBudgetThreshold] = useState(() => parseFloat(localStorage.getItem("openflow_budget_threshold") || "0"));
+  const [budgetThreshold] = useState(() => parseFloat(localStorage.getItem("openflow_budget_threshold") || "0"));
   const todayStr = new Date().toLocaleDateString();
   const todaySpend = costData.perDay[todayStr] || 0;
   const overBudget = budgetThreshold > 0 && todaySpend >= budgetThreshold;

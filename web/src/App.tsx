@@ -34,6 +34,9 @@ import TimelineEditor from "./TimelineEditor";
 import { MarketplacePanel, MARKETPLACE_TEMPLATES } from "./Marketplace";
 import { CustomNodeBuilder, loadCustomNodes } from "./CustomNodes";
 import { WEBHOOK_NODE_DEFS } from "./WebhookNodes";
+import { PromptLibraryPanel } from "./PromptLibrary";
+import { BatchPanel, BatchResultsGrid } from "./BatchProcessing";
+import { PresetsPanel, savePreset, type NodePreset } from "./NodePresets";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -681,6 +684,7 @@ function FlowNode({ data, selected }: NodeProps) {
                 {[
                   { label: "Edit Settings", action: () => { setEditing(true); setShowMenu(false); } },
                   { label: "Retry", action: () => { const onRun = data.onRun as (() => void) | undefined; if (onRun) onRun(); setShowMenu(false); } },
+                  { label: "⭐ Save Preset", action: () => { const onSavePreset = data.onSavePreset as (() => void) | undefined; if (onSavePreset) onSavePreset(); setShowMenu(false); } },
                   { label: "Delete", action: () => { const onDelete = data.onDelete as (() => void) | undefined; if (onDelete) onDelete(); setShowMenu(false); } },
                 ].map((item) => (
                   <button key={item.label} onClick={item.action} style={{ width: "100%", padding: "10px 14px", border: "none", background: "transparent", fontSize: 12, fontWeight: 500, color: item.label === "Delete" ? "#ef4444" : "#1a1a1a", cursor: "pointer", textAlign: "left" }}
@@ -764,13 +768,17 @@ function FlowNode({ data, selected }: NodeProps) {
         </div>
       )}
       {nodeStatus === "done" && outputUrl && (
-        <div style={{ padding: "4px 18px 12px", cursor: "pointer" }} onClick={() => { const isVid = def.category === "video" || def.id === "video.img_to_video"; if (onPreview && outputUrl) onPreview(outputUrl, isVid ? "video" : "image"); }}>
-          {def.category === "video" || def.id === "video.img_to_video" ? (
+        <div style={{ padding: "4px 18px 12px", cursor: "pointer" }} onClick={() => { const isVid = def.category === "video" || def.id === "video.img_to_video"; const isLLM = def.id === "text.llm" || def.id === "tools.prompt_enhancer"; if (!isLLM && onPreview && outputUrl) onPreview(outputUrl, isVid ? "video" : "image"); }}>
+          {def.id === "text.llm" || def.id === "tools.prompt_enhancer" ? (
+            <div style={{ background: "#f5f5f7", borderRadius: 10, padding: "10px 12px", fontSize: 11, color: "#1a1a1a", lineHeight: 1.5, maxHeight: 150, overflowY: "auto", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+              {(data.llmResponse as string) || outputUrl}
+            </div>
+          ) : def.category === "video" || def.id === "video.img_to_video" ? (
             <video src={outputUrl} muted style={{ width: "100%", maxHeight: 120, borderRadius: 10, objectFit: "cover" }} />
           ) : (
             <img src={outputUrl} alt="output" style={{ width: "100%", maxHeight: 120, borderRadius: 10, objectFit: "cover" }} />
           )}
-          <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 4 }}><span style={{ color: "#22c55e", fontSize: 12 }}>✓</span><span style={{ fontSize: 9, color: "#9ca3af" }}>Done · Click to expand</span></div>
+          <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 4 }}><span style={{ color: "#22c55e", fontSize: 12 }}>✓</span><span style={{ fontSize: 9, color: "#9ca3af" }}>Done{def.id !== "text.llm" && def.id !== "tools.prompt_enhancer" ? " · Click to expand" : ""}</span></div>
         </div>
       )}
       {isFailed && (
@@ -1296,6 +1304,12 @@ export default function App() {
   });
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; nodeId: string } | null>(null);
   const [editingComment, setEditingComment] = useState<string | null>(null);
+  const [batchJobs, setBatchJobs] = useState<Array<{ index: number; prompt: string; status: "pending" | "running" | "done" | "error"; result?: string; error?: string }>>([]);
+  const [batchRunning, setBatchRunning] = useState(false);
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [quickAddPos, setQuickAddPos] = useState({ x: 400, y: 300 });
+  const [quickAddSearch, setQuickAddSearch] = useState("");
+  const [snapToGrid, setSnapToGrid] = useState(false);
   // suppress unused warnings
   void showGallery; void showTutorial; void contextMenu; void editingComment;
 
@@ -1391,6 +1405,7 @@ export default function App() {
           onRun: () => runSingleNodeRef.current(nodeId),
           onDelete: () => { pushUndo(); setNodes((nds: Node[]) => nds.filter((n: Node) => n.id !== nodeId)); },
           onPreview: (url: string, type: "image" | "video") => setPreviewModal({ url, type }),
+          onSavePreset: () => saveNodeAsPreset(nodeId),
         },
       };
       setNodes((nds) => [...nds, newNode]);
@@ -1403,8 +1418,6 @@ export default function App() {
     const node = nodes.find((n) => n.id === nodeId);
     if (!node) return;
     const key = falApiKey;
-    if (!key) { addToast("Set your fal.ai API key in Settings first!", "error"); return; }
-    localStorage.setItem("openflow_fal_key", key);
 
     const def = node.data.def as NodeDef;
     const values = node.data.values as Record<string, unknown>;
@@ -1412,6 +1425,53 @@ export default function App() {
 
     const startTime = Date.now();
     setNodeData(nodeId, { status: "running", outputUrl: undefined });
+
+    // LLM node — route through OpenAI-compatible API
+    if (def.id === "text.llm" || def.id === "tools.prompt_enhancer") {
+      const openaiKey = localStorage.getItem("openflow_openai_key") || "";
+      if (!openaiKey) { setNodeData(nodeId, { status: "Error: Set OpenAI API key in Settings" }); addToast("Set your OpenAI API key in Settings!", "error"); return; }
+      try {
+        const llmModel = def.id === "tools.prompt_enhancer" ? "gpt-4o-mini" : (modelKey || "gpt-4o");
+        const systemPrompt = def.id === "tools.prompt_enhancer"
+          ? `You are a prompt enhancement expert. Take the user's basic prompt and expand it into a detailed, vivid prompt optimized for AI image generation. Style hint: ${values.style || "photorealistic"}. Output ONLY the enhanced prompt, nothing else.`
+          : ((values.system as string) || "You are a helpful assistant.");
+        const userMessage = (values.prompt as string) || (values.text as string) || "";
+        const temperature = Number(values.temperature) || 0.7;
+        const maxTokens = Number(values.max_tokens) || 2048;
+
+        // Determine API base — support OpenAI, or any compatible endpoint
+        const apiBase = localStorage.getItem("openflow_llm_endpoint") || "https://api.openai.com/v1";
+
+        const resp = await fetch(`${apiBase}/chat/completions`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${openaiKey}` },
+          body: JSON.stringify({
+            model: llmModel,
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userMessage },
+            ],
+            temperature,
+            max_tokens: maxTokens,
+          }),
+        });
+        const data = await resp.json();
+        const reply = data.choices?.[0]?.message?.content || data.error?.message || "No response";
+        const genTime = Date.now() - startTime;
+        // Store text output as outputUrl for data flow (text nodes pass text through outputUrl)
+        setNodeData(nodeId, { status: "done", outputUrl: reply, llmResponse: reply });
+        addToast(`LLM responded! (${(genTime / 1000).toFixed(1)}s)`, "success");
+      } catch (err: unknown) {
+        setNodeData(nodeId, { status: `Error: ${String(err)}` });
+        addToast(`LLM Error: ${String(err).slice(0, 60)}`, "error");
+      }
+      return;
+    }
+
+    // Standard fal.ai generation
+    if (!key) { addToast("Set your fal.ai API key in Settings first!", "error"); return; }
+    localStorage.setItem("openflow_fal_key", key);
+
     const result = await runFalGeneration(modelKey, values, key);
     if (result.url) {
       const genTime = Date.now() - startTime;
@@ -1428,6 +1488,61 @@ export default function App() {
   }, [nodes, falApiKey, setNodeData, refreshAssets, addToast]);
 
   runSingleNodeRef.current = runSingleNode;
+
+  // Batch processing
+  const runBatch = useCallback(async (prompts: string[], model: string) => {
+    if (!falApiKey) { addToast("Set your fal.ai API key first!", "error"); return; }
+    setBatchRunning(true);
+    const jobs = prompts.map((p, i) => ({ index: i, prompt: p, status: "pending" as const }));
+    setBatchJobs([...jobs]);
+    for (let i = 0; i < jobs.length; i++) {
+      jobs[i] = { ...jobs[i], status: "running" };
+      setBatchJobs([...jobs]);
+      const result = await runFalGeneration(model, { prompt: jobs[i].prompt }, falApiKey);
+      if (result.url) {
+        jobs[i] = { ...jobs[i], status: "done", result: result.url };
+        saveAsset({ url: result.url, type: "image", prompt: jobs[i].prompt, model, timestamp: Date.now() });
+      } else {
+        jobs[i] = { ...jobs[i], status: "error", error: result.error };
+      }
+      setBatchJobs([...jobs]);
+    }
+    setBatchRunning(false);
+    refreshAssets();
+    addToast(`Batch complete! ${jobs.filter(j => j.status === "done").length}/${jobs.length} succeeded`, "success");
+  }, [falApiKey, addToast, refreshAssets]);
+
+  // Auto-layout nodes in a grid
+  const autoLayout = useCallback(() => {
+    pushUndo();
+    const cols = Math.ceil(Math.sqrt(nodes.length));
+    const gapX = 320, gapY = 350;
+    setNodes(nds => nds.map((n, i) => ({
+      ...n,
+      position: { x: 100 + (i % cols) * gapX, y: 100 + Math.floor(i / cols) * gapY },
+    })));
+    addToast("Nodes arranged!", "success");
+  }, [nodes.length, pushUndo, setNodes, addToast]);
+
+  // Save node as preset
+  const saveNodeAsPreset = useCallback((nodeId: string) => {
+    const node = nodes.find(n => n.id === nodeId);
+    if (!node) return;
+    const def = node.data.def as NodeDef;
+    const values = node.data.values as Record<string, unknown>;
+    const presetName = window.prompt("Preset name:", def.name + " preset") || def.name + " preset";
+    const preset: NodePreset = {
+      id: `preset_${Date.now()}`,
+      name: presetName,
+      defId: def.id,
+      defName: def.name,
+      icon: def.icon,
+      values: { ...values },
+      createdAt: Date.now(),
+    };
+    savePreset(preset);
+    addToast(`Saved preset "${presetName}"!`, "success");
+  }, [nodes, addToast]);
 
   const handleRun = useCallback(async () => {
     if (!falApiKey) { addToast("Enter your fal.ai API key in Settings!", "error"); return; }
@@ -1939,6 +2054,24 @@ export default function App() {
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
         </button>
 
+        {/* Prompt Library */}
+        <button title="Prompt Library" onClick={() => { setActivePanel(activePanel === "prompts" ? null : "prompts"); }}
+          style={{ width: 38, height: 38, borderRadius: 10, border: "none", background: activePanel === "prompts" ? "#1e1e22" : "transparent", color: activePanel === "prompts" ? "#c026d3" : "#6b6b75", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        </button>
+
+        {/* Batch Processing */}
+        <button title="Batch Processing" onClick={() => { setActivePanel(activePanel === "batch" ? null : "batch"); }}
+          style={{ width: 38, height: 38, borderRadius: 10, border: "none", background: activePanel === "batch" ? "#1e1e22" : "transparent", color: activePanel === "batch" ? "#c026d3" : "#6b6b75", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        </button>
+
+        {/* Presets */}
+        <button title="My Presets" onClick={() => { setActivePanel(activePanel === "presets" ? null : "presets"); }}
+          style={{ width: 38, height: 38, borderRadius: 10, border: "none", background: activePanel === "presets" ? "#1e1e22" : "transparent", color: activePanel === "presets" ? "#c026d3" : "#6b6b75", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        </button>
+
         {/* Marketplace */}
         <button title="Marketplace" onClick={() => { setActivePanel(activePanel === "marketplace" ? null : "marketplace"); }}
           style={{ width: 38, height: 38, borderRadius: 10, border: "none", background: activePanel === "marketplace" ? "#1e1e22" : "transparent", color: activePanel === "marketplace" ? "#c026d3" : "#6b6b75", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }}>
@@ -1959,7 +2092,22 @@ export default function App() {
       {/* Flyout panel */}
       {activePanel && (
         <aside style={{ width: 280, background: "#ffffff", borderRight: "1px solid #ebebee", overflowY: "auto", flexShrink: 0, zIndex: 15, boxShadow: "4px 0 16px rgba(0,0,0,0.03)", display: "flex", flexDirection: "column", animation: "slideFlyout 0.2s ease-out" }}>
-          {activePanel === "customnodes" ? (
+          {activePanel === "prompts" ? (
+            <PromptLibraryPanel
+              onUsePrompt={(p) => { addToast("Prompt copied!", "success"); }}
+              onCreateNode={(p) => {
+                const def = NODE_DEFS.find(d => d.id === "image.text_to_image");
+                if (def) { addNodeWithHandler(def, { prompt: p }); setActivePanel(null); setCurrentView("canvas"); }
+              }}
+            />
+          ) : activePanel === "batch" ? (
+            <BatchPanel onRunBatch={runBatch} isRunning={batchRunning} />
+          ) : activePanel === "presets" ? (
+            <PresetsPanel onCreateNode={(defId, values) => {
+              const def = NODE_DEFS.find(d => d.id === defId);
+              if (def) { addNodeWithHandler(def, values); setActivePanel(null); setCurrentView("canvas"); }
+            }} />
+          ) : activePanel === "customnodes" ? (
             <CustomNodeBuilder onSave={(customNode) => {
               addToast(`Custom node "${customNode.name}" created!`, "success");
             }} />
@@ -2229,6 +2377,10 @@ export default function App() {
                   style={{ padding: "8px 14px", borderRadius: 8, border: "1px solid #2a2a30", background: "#141416", color: "#ef4444", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>🗑 Delete</button>
               </>
             )}
+            <button onClick={autoLayout} title="Auto-layout"
+              style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid #2a2a30", background: "#141416", color: "#9ca3af", fontSize: 12, cursor: "pointer" }}>⊞</button>
+            <button onClick={() => setSnapToGrid(s => !s)} title="Snap to grid"
+              style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid #2a2a30", background: snapToGrid ? "#2a2a30" : "#141416", color: snapToGrid ? "#c026d3" : "#9ca3af", fontSize: 12, cursor: "pointer" }}>⊡</button>
             <button onClick={() => undo()} disabled={undoStack.length === 0} title="Undo (Ctrl+Z)"
               style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid #2a2a30", background: "#141416", color: undoStack.length > 0 ? "#9ca3af" : "#4a4a50", fontSize: 12, cursor: undoStack.length > 0 ? "pointer" : "not-allowed" }}>↩</button>
             <button onClick={() => redo()} disabled={redoStack.length === 0} title="Redo (Ctrl+Shift+Z)"
@@ -2366,8 +2518,18 @@ export default function App() {
             <div style={{ flex: 1 }}>
               <ReactFlow nodes={nodes} edges={edges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect}
                 nodeTypes={nodeTypes} fitView style={{ background: "#f0f0f2" }}
+                snapToGrid={snapToGrid} snapGrid={[20, 20]}
                 onNodeContextMenu={(e, node) => { e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY, nodeId: node.id }); }}
                 onClick={() => setContextMenu(null)}
+                onDoubleClick={(e) => {
+                  // Quick-add node search on double-click empty canvas
+                  const target = e.target as HTMLElement;
+                  if (target.classList.contains("react-flow__pane") || target.closest(".react-flow__pane")) {
+                    setQuickAddPos({ x: e.clientX, y: e.clientY });
+                    setQuickAddSearch("");
+                    setQuickAddOpen(true);
+                  }
+                }}
                 defaultEdgeOptions={{ animated: isRunning, style: { stroke: "#d1d5db", strokeWidth: 1.5 }, type: "smoothstep" }}>
                 <Background variant={BackgroundVariant.Dots} color="#c0c0c6" gap={28} size={1.2} />
                 <Controls style={{ background: "#ffffff", border: "1px solid #e8e8eb", borderRadius: 10, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }} />
@@ -2417,6 +2579,42 @@ export default function App() {
           )}
         </div>
       )}
+      {/* Quick-add node search (double-click canvas) */}
+      {quickAddOpen && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 900 }} onClick={() => setQuickAddOpen(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ position: "absolute", left: quickAddPos.x - 150, top: quickAddPos.y - 20, width: 300, background: "#fff", border: "1px solid #e8e8eb", borderRadius: 12, boxShadow: "0 8px 32px rgba(0,0,0,0.15)", padding: 8 }}>
+            <input autoFocus value={quickAddSearch} onChange={e => setQuickAddSearch(e.target.value)} placeholder="Search nodes..."
+              onKeyDown={e => {
+                if (e.key === "Escape") setQuickAddOpen(false);
+                if (e.key === "Enter") {
+                  const q = quickAddSearch.toLowerCase();
+                  const def = NODE_DEFS.find(d => d.name.toLowerCase().includes(q) || d.id.toLowerCase().includes(q));
+                  if (def) { addNodeWithHandler(def); setQuickAddOpen(false); setCurrentView("canvas"); }
+                }
+              }}
+              style={{ width: "100%", background: "#f5f5f7", border: "none", borderRadius: 8, fontSize: 13, padding: "10px 12px", outline: "none", boxSizing: "border-box", color: "#1a1a1a", marginBottom: 4 }} />
+            <div style={{ maxHeight: 250, overflowY: "auto" }}>
+              {NODE_DEFS.filter(d => {
+                if (!quickAddSearch.trim()) return true;
+                const q = quickAddSearch.toLowerCase();
+                return d.name.toLowerCase().includes(q) || d.id.toLowerCase().includes(q) || d.category.toLowerCase().includes(q);
+              }).slice(0, 12).map(def => (
+                <div key={def.id} onClick={() => { addNodeWithHandler(def); setQuickAddOpen(false); setCurrentView("canvas"); }}
+                  style={{ padding: "8px 10px", borderRadius: 8, cursor: "pointer", fontSize: 12, display: "flex", alignItems: "center", gap: 8, color: "#1a1a1a" }}
+                  onMouseOver={e => e.currentTarget.style.background = "#f5f5f7"} onMouseOut={e => e.currentTarget.style.background = "transparent"}>
+                  <span>{def.icon}</span>
+                  <div>
+                    <div style={{ fontWeight: 600 }}>{def.name}</div>
+                    <div style={{ fontSize: 10, color: "#9ca3af" }}>{def.category}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Batch results overlay */}
+      <BatchResultsGrid jobs={batchJobs} />
       {/* Full-size preview modal */}
       {previewModal && (
         <div onClick={() => setPreviewModal(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 40, cursor: "pointer" }}>

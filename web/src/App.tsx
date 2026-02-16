@@ -30,6 +30,7 @@ import { GalleryView } from "./GalleryView";
 import { TutorialOverlay, shouldShowTutorial } from "./TutorialOverlay";
 import { encodeWorkflowToUrl, decodeWorkflowFromHash } from "./WorkflowSharing";
 import { StoryboardView } from "./Storyboard";
+import TimelineEditor from "./TimelineEditor";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -349,12 +350,113 @@ const NODE_DEFS: NodeDef[] = [
       { name: "image", type: "image", description: "Generated image" },
     ],
   },
+  // Sprint 7: Audio nodes
+  {
+    id: "audio.tts",
+    name: "Text to Speech",
+    description: "Generate speech from text using browser SpeechSynthesis",
+    category: "audio",
+    icon: "🗣️",
+    color: "#22c55e",
+    inputs: [
+      { name: "text", type: "string", description: "Text to speak", required: true },
+      { name: "voice", type: "string", description: "Voice", default: "default", options: ["default", "Google US English", "Google UK English Female", "Samantha", "Daniel"] },
+      { name: "rate", type: "float", description: "Speed (0.5-2)", default: 1 },
+    ],
+    outputs: [
+      { name: "audio", type: "string", description: "Audio (browser playback)" },
+    ],
+  },
+  {
+    id: "audio.music_gen",
+    name: "Music Generator",
+    description: "Generate background music (MusicGen placeholder)",
+    category: "audio",
+    icon: "🎶",
+    color: "#22c55e",
+    inputs: [
+      { name: "prompt", type: "string", description: "Music description", required: true },
+      { name: "duration", type: "integer", description: "Duration (sec)", default: 10, options: ["5", "10", "15", "30"] },
+      { name: "model", type: "string", description: "Model", default: "musicgen-large", options: ["musicgen-large", "musicgen-small"] },
+    ],
+    outputs: [
+      { name: "audio", type: "string", description: "Audio URL" },
+    ],
+  },
+  {
+    id: "audio.sfx",
+    name: "Sound Effects",
+    description: "Generate sound effects (placeholder)",
+    category: "audio",
+    icon: "🔊",
+    color: "#22c55e",
+    inputs: [
+      { name: "prompt", type: "string", description: "Sound description", required: true },
+      { name: "duration", type: "integer", description: "Duration (sec)", default: 3 },
+    ],
+    outputs: [
+      { name: "audio", type: "string", description: "Audio URL" },
+    ],
+  },
+  {
+    id: "audio.voiceover",
+    name: "Voice-Over",
+    description: "Generate voice-over narration for video timeline",
+    category: "audio",
+    icon: "🎙️",
+    color: "#22c55e",
+    inputs: [
+      { name: "text", type: "string", description: "Narration text", required: true },
+      { name: "voice", type: "string", description: "Voice style", default: "narrator", options: ["narrator", "conversational", "dramatic", "news"] },
+    ],
+    outputs: [
+      { name: "audio", type: "string", description: "Voice-over audio" },
+    ],
+  },
+  // Sprint 7: Render node
+  {
+    id: "video.render",
+    name: "Render / Merge Video",
+    description: "Concatenate multiple video clips into one",
+    category: "video",
+    icon: "🎞️",
+    color: "#f59e0b",
+    inputs: [
+      { name: "video_1", type: "string", description: "Video 1 URL", required: true },
+      { name: "video_2", type: "string", description: "Video 2 URL", required: true },
+      { name: "video_3", type: "string", description: "Video 3 URL (optional)", default: "" },
+      { name: "video_4", type: "string", description: "Video 4 URL (optional)", default: "" },
+      { name: "transition", type: "string", description: "Transition", default: "cut", options: ["cut", "crossfade", "fade-black"] },
+    ],
+    outputs: [
+      { name: "video", type: "video", description: "Merged video" },
+    ],
+  },
+  // Sprint 7: Captions node
+  {
+    id: "captions.generate",
+    name: "Caption Generator",
+    description: "Generate SRT subtitles from video content",
+    category: "tools",
+    icon: "💬",
+    color: "#f59e0b",
+    inputs: [
+      { name: "video_url", type: "string", description: "Video URL", required: true },
+      { name: "prompt", type: "string", description: "Video description (helps accuracy)", default: "" },
+      { name: "style", type: "string", description: "Caption style", default: "standard", options: ["standard", "dramatic", "minimal", "verbose"] },
+    ],
+    outputs: [
+      { name: "srt", type: "string", description: "SRT subtitle text" },
+      { name: "preview", type: "string", description: "Caption preview" },
+    ],
+  },
 ];
 
 const CATEGORIES: Record<string, string> = {
   input: "Inputs",
   image: "Image",
   video: "Video",
+  audio: "Audio",
   text: "Text / LLM",
   transform: "Transform",
   output: "Output",
@@ -1113,7 +1215,8 @@ function HistoryPanel({ onRerun }: { onRerun: (record: { model: string; prompt: 
 
 export default function App() {
   const [showLanding, setShowLanding] = useState(true);
-  const [currentView, setCurrentView] = useState<"dashboard" | "canvas" | "assets" | "storyboard">("dashboard");
+  const [currentView, setCurrentView] = useState<"dashboard" | "canvas" | "assets" | "storyboard" | "timeline">("dashboard");
+  const [showExportMenu, setShowExportMenu] = useState(false);
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [isRunning, setIsRunning] = useState(false);
@@ -1722,7 +1825,10 @@ export default function App() {
         {/* Storyboard */}
         <button title="Storyboard" onClick={() => { setCurrentView("storyboard"); setActivePanel(null); }}
           style={{ width: 38, height: 38, borderRadius: 10, border: "none", background: currentView === "storyboard" ? "#1e1e22" : "transparent", color: currentView === "storyboard" ? "#c026d3" : "#6b6b75", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }}
-          dangerouslySetInnerHTML={{ __html: SVG_ICONS.scenes }} />
+        >🎬</button>
+        <button title="Timeline" onClick={() => { setCurrentView("timeline"); setActivePanel(null); }}
+          style={{ width: 38, height: 38, borderRadius: 10, border: "none", background: currentView === "timeline" ? "#1e1e22" : "transparent", color: currentView === "timeline" ? "#c026d3" : "#6b6b75", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }}
+        >🎞️</button>
 
         {/* Category icons */}
         {categories.map((cat) => (
@@ -1981,7 +2087,7 @@ export default function App() {
           {/* Top bar with view tabs */}
           <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", background: "#0e0e10", borderBottom: "1px solid #1e1e22", flexShrink: 0 }}>
             {/* View tabs */}
-            {(["dashboard", "canvas", "storyboard", "assets"] as const).map((view) => (
+            {(["dashboard", "canvas", "storyboard", "timeline", "assets"] as const).map((view) => (
               <button key={view} onClick={() => setCurrentView(view)}
                 style={{
                   padding: "8px 16px", borderRadius: 8, border: "none",
@@ -2042,17 +2148,76 @@ export default function App() {
               style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 10px", borderRadius: 8, border: "1px solid #2a2a30", background: "#141416", color: "#9ca3af", fontSize: 12, cursor: "pointer" }}>
               ❓
             </button>
-            <button onClick={exportWorkflow} title="Export workflow"
-              style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, border: "1px solid #2a2a30", background: "#141416", color: "#9ca3af", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-              📤 Export
-            </button>
+            <div style={{ position: "relative" }}>
+              <button onClick={() => setShowExportMenu(v => !v)} title="Export"
+                style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, border: "1px solid #2a2a30", background: "#141416", color: "#9ca3af", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                📤 Export ▾
+              </button>
+              {showExportMenu && (
+                <div style={{ position: "absolute", top: "100%", right: 0, marginTop: 4, background: "#1a1a1e", border: "1px solid #2a2a30", borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.4)", zIndex: 200, minWidth: 180, padding: 4 }}>
+                  <button onClick={() => { exportWorkflow(); setShowExportMenu(false); }}
+                    style={{ width: "100%", padding: "8px 12px", background: "none", border: "none", fontSize: 12, cursor: "pointer", textAlign: "left", borderRadius: 6, color: "#e0e0e5" }}
+                    onMouseOver={e => e.currentTarget.style.background = "#2a2a30"} onMouseOut={e => e.currentTarget.style.background = "none"}>
+                    📋 JSON Workflow
+                  </button>
+                  <button onClick={() => {
+                    import("https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/+esm").then(mod => {
+                      const el = document.querySelector(".react-flow") as HTMLElement;
+                      if (el) mod.default(el).then((c: HTMLCanvasElement) => { const a = document.createElement("a"); a.href = c.toDataURL("image/png"); a.download = "openflow-canvas.png"; a.click(); });
+                    }).catch(() => { exportWorkflow(); });
+                    setShowExportMenu(false);
+                  }}
+                    style={{ width: "100%", padding: "8px 12px", background: "none", border: "none", fontSize: 12, cursor: "pointer", textAlign: "left", borderRadius: 6, color: "#e0e0e5" }}
+                    onMouseOver={e => e.currentTarget.style.background = "#2a2a30"} onMouseOut={e => e.currentTarget.style.background = "none"}>
+                    🖼️ PNG Screenshot
+                  </button>
+                  <button onClick={() => {
+                    const storyPages = nodes.map(n => {
+                      const def = (n.data.def as NodeDef);
+                      const vals = n.data.values as Record<string, unknown>;
+                      return { type: def.id, prompt: (vals.prompt as string) || "", model: (vals.model as string) || "", output: (n.data as Record<string, unknown>).output as string | undefined };
+                    });
+                    const win = window.open("", "_blank");
+                    if (win) {
+                      win.document.write("<html><head><title>OpenFlow Storyboard</title><style>body{font-family:sans-serif;margin:0}@media print{.page{page-break-after:always}}.page{padding:40px;max-width:800px;margin:0 auto;border-bottom:1px solid #eee}img,video{max-width:100%;max-height:400px;border-radius:8px}</style></head><body>");
+                      storyPages.forEach((p, i) => {
+                        win.document.write(`<div class="page"><h2>Scene ${i + 1}: ${p.type}</h2><p><b>Prompt:</b> ${p.prompt || "N/A"}</p><p><b>Model:</b> ${p.model || "N/A"}</p>`);
+                        if (p.output) win.document.write(`<img src="${p.output}" />`);
+                        win.document.write("</div>");
+                      });
+                      win.document.write("<script>setTimeout(()=>window.print(),500)<\/script></body></html>");
+                      win.document.close();
+                    }
+                    setShowExportMenu(false);
+                  }}
+                    style={{ width: "100%", padding: "8px 12px", background: "none", border: "none", fontSize: 12, cursor: "pointer", textAlign: "left", borderRadius: 6, color: "#e0e0e5" }}
+                    onMouseOver={e => e.currentTarget.style.background = "#2a2a30"} onMouseOut={e => e.currentTarget.style.background = "none"}>
+                    📄 PDF Storyboard
+                  </button>
+                </div>
+              )}
+            </div>
             <button onClick={handleRun} disabled={isRunning || nodes.length === 0} title="Run All (topological order)"
               style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 8, border: "none", background: isRunning ? "#2a2a30" : "#c026d3", color: isRunning ? "#6b6b75" : "#fff", fontSize: 12, fontWeight: 700, cursor: isRunning ? "not-allowed" : "pointer" }}>
               {isRunning ? "⏳ Running..." : "▶ Run All"}
             </button>
           </div>
 
-          {currentView === "storyboard" ? (
+          {currentView === "timeline" ? (
+            <TimelineEditor assets={assets} onExportVideo={(clips) => {
+              if (clips.length === 0) return;
+              // MVP: open all video URLs in sequence / generate download links
+              const urls = clips.filter(c => c.url).map(c => c.url!);
+              const win = window.open("", "_blank");
+              if (win) {
+                win.document.write("<html><head><title>Export Preview</title><style>body{background:#000;color:#fff;font-family:sans-serif;padding:20px}video{max-width:100%;margin:10px 0;border-radius:8px}</style></head><body><h2>🎬 Exported Video Sequence</h2>");
+                urls.forEach((u, i) => win.document.write(`<div><h3>Clip ${i + 1}</h3><video src="${u}" controls autoplay ${i > 0 ? "" : ""}></video><br><a href="${u}" download style="color:#c026d3">Download Clip ${i + 1}</a></div>`));
+                win.document.write("</body></html>");
+                win.document.close();
+              }
+              addToast(`Exported ${urls.length} clips`, "success");
+            }} />
+          ) : currentView === "storyboard" ? (
             <StoryboardView
               falApiKey={falApiKey}
               onSaveAsset={(asset) => { setAssets(prev => [asset, ...prev]); }}

@@ -1663,6 +1663,36 @@ export default function App() {
     if (!key) { addToast("Set your fal.ai API key in Settings first!", "error"); return; }
     localStorage.setItem("openflow_fal_key", key);
 
+    // Upscale nodes need special handling — image field maps to image_url
+    if (def.id === "transform.upscale") {
+      const imageUrl = (values.image as string) || (values.input_image as string) || "";
+      if (!imageUrl) { setNodeData(nodeId, { status: "Error: No input image" }); addToast("Upscale needs an input image!", "error"); return; }
+      const falModel = FAL_MODELS[modelKey] || "fal-ai/real-esrgan";
+      try {
+        const body: Record<string, unknown> = { image_url: imageUrl, scale: Number(values.scale) || 2 };
+        const resp = await fetch(`https://fal.run/${falModel}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Key ${key}` },
+          body: JSON.stringify(body),
+        });
+        const data = await resp.json();
+        const url = data.image?.url || data.images?.[0]?.url;
+        if (url) {
+          const genTime = Date.now() - startTime;
+          setNodeData(nodeId, { status: "done", outputUrl: url });
+          saveAsset({ url, type: "image", prompt: `Upscale ${modelKey} ${values.scale}x`, model: modelKey, timestamp: Date.now() });
+          addToast(`Upscaled! (${(genTime / 1000).toFixed(1)}s)`, "success");
+        } else {
+          const errMsg = typeof data.detail === "string" ? data.detail : JSON.stringify(data).slice(0, 200);
+          setNodeData(nodeId, { status: `Error: ${errMsg}` });
+          addToast(`Upscale failed: ${errMsg.slice(0, 60)}`, "error");
+        }
+      } catch (err: unknown) {
+        setNodeData(nodeId, { status: `Error: ${String(err)}` });
+      }
+      return;
+    }
+
     const result = await runFalGeneration(modelKey, values, key);
     if (result.url) {
       const genTime = Date.now() - startTime;
@@ -1675,9 +1705,10 @@ export default function App() {
       addToast(`Generated! (${(genTime / 1000).toFixed(1)}s)`, "success");
       addNotification("success", "Generation complete", `${modelKey}: ${((values.prompt as string) || "").slice(0, 60)}`, nodeId);
     } else {
-      setNodeData(nodeId, { status: `Error: ${result.error}` });
-      addToast(`Error: ${result.error?.slice(0, 60)}`, "error");
-      addNotification("error", "Generation failed", result.error?.slice(0, 80) || "Unknown error", nodeId);
+      const errStr = typeof result.error === "object" ? JSON.stringify(result.error).slice(0, 200) : String(result.error || "Unknown error");
+      setNodeData(nodeId, { status: `Error: ${errStr}` });
+      addToast(`Error: ${errStr.slice(0, 60)}`, "error");
+      addNotification("error", "Generation failed", errStr.slice(0, 80), nodeId);
     }
   }, [nodes, falApiKey, setNodeData, refreshAssets, addToast]);
 

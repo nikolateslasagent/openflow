@@ -484,6 +484,8 @@ const SVG_ICONS: Record<string, string> = {
   assets: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>`,
   chat: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>`,
   dashboard: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>`,
+  storyboard: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="18" rx="2"/><line x1="8" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="16" y2="21"/><line x1="2" y1="12" x2="22" y2="12"/></svg>`,
+  timeline: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="2" y1="12" x2="22" y2="12"/><rect x="3" y="5" width="6" height="4" rx="1"/><rect x="11" y="5" width="8" height="4" rx="1"/><rect x="5" y="15" width="10" height="4" rx="1"/><rect x="17" y="15" width="4" height="4" rx="1"/></svg>`,
 };
 
 const NODE_ICONS: Record<string, string> = {
@@ -1880,10 +1882,10 @@ export default function App() {
         {/* Storyboard */}
         <button title="Storyboard" onClick={() => { setCurrentView("storyboard"); setActivePanel(null); }}
           style={{ width: 38, height: 38, borderRadius: 10, border: "none", background: currentView === "storyboard" ? "#1e1e22" : "transparent", color: currentView === "storyboard" ? "#c026d3" : "#6b6b75", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }}
-        >🎬</button>
+          dangerouslySetInnerHTML={{ __html: SVG_ICONS.storyboard }} />
         <button title="Timeline" onClick={() => { setCurrentView("timeline"); setActivePanel(null); }}
           style={{ width: 38, height: 38, borderRadius: 10, border: "none", background: currentView === "timeline" ? "#1e1e22" : "transparent", color: currentView === "timeline" ? "#c026d3" : "#6b6b75", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }}
-        >🎞️</button>
+          dangerouslySetInnerHTML={{ __html: SVG_ICONS.timeline }} />
 
         {/* Category icons */}
         {categories.map((cat) => (
@@ -1956,7 +1958,7 @@ export default function App() {
 
       {/* Flyout panel */}
       {activePanel && (
-        <aside style={{ width: activePanel === "chat" ? 300 : activePanel === "models" ? 280 : activePanel === "marketplace" ? 300 : activePanel === "customnodes" ? 300 : 220, background: "#ffffff", borderRight: "1px solid #ebebee", overflowY: "auto", flexShrink: 0, zIndex: 15, boxShadow: "4px 0 16px rgba(0,0,0,0.03)", display: "flex", flexDirection: "column", animation: "slideFlyout 0.2s ease-out" }}>
+        <aside style={{ width: 280, background: "#ffffff", borderRight: "1px solid #ebebee", overflowY: "auto", flexShrink: 0, zIndex: 15, boxShadow: "4px 0 16px rgba(0,0,0,0.03)", display: "flex", flexDirection: "column", animation: "slideFlyout 0.2s ease-out" }}>
           {activePanel === "customnodes" ? (
             <CustomNodeBuilder onSave={(customNode) => {
               addToast(`Custom node "${customNode.name}" created!`, "success");

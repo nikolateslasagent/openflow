@@ -23,7 +23,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { ModelManagerPanel } from "./ModelManager";
-import { WorkflowTemplatesPanel, type WorkflowPipeline } from "./WorkflowTemplates";
+import { WorkflowTemplatesPanel } from "./WorkflowTemplates";
 import { saveTrainingRecord, getTrainingDataCount, exportTrainingData } from "./TrainingData";
 import { useToast } from "./Toast";
 

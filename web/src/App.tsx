@@ -2273,8 +2273,8 @@ export default function App() {
 
         {/* Compare Models */}
         <button title="Compare Models" onClick={() => { setActivePanel(activePanel === "compare" ? null : "compare"); }}
-          style={{ width: 38, height: 38, borderRadius: 10, border: "none", background: activePanel === "compare" ? "#1e1e22" : "transparent", color: activePanel === "compare" ? "#c026d3" : "#6b6b75", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4, fontSize: 18 }}>
-          ⚖️
+          style={{ width: 38, height: 38, borderRadius: 10, border: "none", background: activePanel === "compare" ? "#1e1e22" : "transparent", color: activePanel === "compare" ? "#c026d3" : "#6b6b75", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4 }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M16 3h5v5"/><path d="M8 3H3v5"/><path d="M12 22V8"/><path d="m3 8 9-5 9 5"/><path d="M3 16l4-2v6"/><path d="M21 16l-4-2v6"/></svg>
         </button>
 
         {/* Chat */}
@@ -2668,7 +2668,7 @@ export default function App() {
               navigator.clipboard.writeText(url).then(() => addToast("Share link copied to clipboard!", "success")).catch(() => { prompt("Copy this link:", url); });
             }} title="Share workflow"
               style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, border: "1px solid #2a2a30", background: "#141416", color: "#9ca3af", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-              🔗 Share
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0}}><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> Share
             </button>
             <button onClick={() => {
               const collabUrl = `${window.location.origin}${window.location.pathname}?collab=${Date.now().toString(36)}`;

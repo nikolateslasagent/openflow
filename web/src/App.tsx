@@ -1493,7 +1493,7 @@ export default function App() {
   const runBatch = useCallback(async (prompts: string[], model: string) => {
     if (!falApiKey) { addToast("Set your fal.ai API key first!", "error"); return; }
     setBatchRunning(true);
-    const jobs = prompts.map((p, i) => ({ index: i, prompt: p, status: "pending" as const }));
+    const jobs: Array<{ index: number; prompt: string; status: "pending" | "running" | "done" | "error"; result?: string; error?: string }> = prompts.map((p, i) => ({ index: i, prompt: p, status: "pending" }));
     setBatchJobs([...jobs]);
     for (let i = 0; i < jobs.length; i++) {
       jobs[i] = { ...jobs[i], status: "running" };
@@ -2094,7 +2094,7 @@ export default function App() {
         <aside style={{ width: 280, background: "#ffffff", borderRight: "1px solid #ebebee", overflowY: "auto", flexShrink: 0, zIndex: 15, boxShadow: "4px 0 16px rgba(0,0,0,0.03)", display: "flex", flexDirection: "column", animation: "slideFlyout 0.2s ease-out" }}>
           {activePanel === "prompts" ? (
             <PromptLibraryPanel
-              onUsePrompt={(p) => { addToast("Prompt copied!", "success"); }}
+              onUsePrompt={() => { addToast("Prompt copied!", "success"); }}
               onCreateNode={(p) => {
                 const def = NODE_DEFS.find(d => d.id === "image.text_to_image");
                 if (def) { addNodeWithHandler(def, { prompt: p }); setActivePanel(null); setCurrentView("canvas"); }

@@ -900,7 +900,7 @@ export default function App() {
   const [authToken, setAuthToken] = useState(() => localStorage.getItem("openflow_token") || "");
   const [authEmail, setAuthEmail] = useState("");
   const [authPass, setAuthPass] = useState("");
-  const BACKEND_URL = "https://openflow-api.fly.dev"; // placeholder — works locally with http://localhost:8000
+  const BACKEND_URL = window.location.hostname === "localhost" ? "http://localhost:8000" : "/api"; // local dev or proxied
 
   const apiHeaders = () => ({ "Content-Type": "application/json", "Authorization": `Bearer ${authToken}` });
 
